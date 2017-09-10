@@ -18,11 +18,11 @@ class DicomReader {
 public:
     void addFile(const char* file_name);
     void config();
-    std::vector<cv::Mat> read();
+    std::vector<cv::Mat> read(int cv_type = -1);
 private:
-    int bits = 0;
     int depth = 0;
-    int type = 0;
+    int input_bits = 0;
+    int valuable_bits = 0;
     int width = 0;
     int height = 0;
     size_t size = 0;
@@ -32,9 +32,23 @@ private:
 
     template <typename T>
     void configureNormalization(DicomImage *img);
+    void configureNormalization(DicomImage *img);
 
     template<typename T>
-    cv::Mat createMat(DicomImage *img) const;
+    cv::Mat createMat(DicomImage *img, int cv_type) const;
+
+    template <typename IT, typename OT>
+    OT* normalize(IT* data) const;
+
+    template <typename IT, typename OT>
+    OT* normalizeToFloat(IT* data) const;
+
+    int guessCVType() const;
+
+
+    void calculateValuableBits();
+
+    void readImageProperties(const DicomImage *img);
 };
 
 

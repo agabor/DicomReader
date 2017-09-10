@@ -1,7 +1,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "dicom.h"
+#include "DicomReader.h"
 #include <iostream>
 
 int main() {
@@ -10,7 +10,7 @@ int main() {
     DicomReader r;
     r.addFile("../test.dcm");
     r.config();
-    cv::Mat image = r.read()[0];
+    cv::Mat image = r.read(CV_64F)[0];
 
     cv::namedWindow("test");
     cv::imshow("test", image);
