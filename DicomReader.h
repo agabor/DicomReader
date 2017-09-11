@@ -38,10 +38,10 @@ private:
     cv::Mat createMat(DicomImage *img, int cv_type) const;
 
     template <typename IT, typename OT>
-    OT* normalize(IT* data) const;
+    OT* normalize(const IT* data) const;
 
     template <typename IT, typename OT>
-    OT* normalizeToFloat(IT* data) const;
+    OT* normalizeToFloat(const IT* data) const;
 
     int guessCVType() const;
 
@@ -49,6 +49,9 @@ private:
     void calculateValuableBits();
 
     void readImageProperties(const DicomImage *img);
+
+    template<typename T>
+    const T *getOutputData(DicomImage *img) const;
 };
 
 

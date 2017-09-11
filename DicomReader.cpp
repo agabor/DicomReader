@@ -12,7 +12,7 @@ void DicomReader::addFile(const char *file_name) {
 }
 
 template <typename T>
-std::tuple<T,T, size_t> getRange(T* data) {
+std::tuple<T,T, size_t> getRange(const T* data) {
     size_t i = 0;
     T item = data[i];
     T min = item;
@@ -30,7 +30,7 @@ std::tuple<T,T, size_t> getRange(T* data) {
 }
 
 template <typename IT, typename OT>
-OT* DicomReader::normalize(IT* data) const {
+OT* DicomReader::normalize(const IT* data) const {
     auto *normd = new OT[size];
     auto maxval = (OT)-1;
     IT d = (IT)max - (IT)min;
@@ -43,7 +43,7 @@ OT* DicomReader::normalize(IT* data) const {
 
 
 template <typename IT, typename OT>
-OT* DicomReader::normalizeToFloat(IT* data) const {
+OT* DicomReader::normalizeToFloat(const IT* data) const {
     auto *normd = new OT[size];
     auto d = (double)((IT)max - (IT)min);
     for( size_t i = 0; i < size; ++i){
@@ -61,19 +61,21 @@ void DicomReader::config() {
 }
 
 void DicomReader::readImageProperties(const DicomImage *img) {
+    auto w = int(img->getWidth());
+    auto h = int(img->getHeight());
     if (input_bits == 0) {
         depth = img->getDepth();
-        width = static_cast<int>(img->getWidth());
-        height = static_cast<int>(img->getHeight());
+        width = w;
+        height = h;
         input_bits = 1;
         while (input_bits < depth)
             input_bits *= 2;
     } else {
         if (depth != img->getDepth())
             throw std::exception();
-        if (width != static_cast<int>(img->getWidth()))
+        if (width != w)
             throw std::exception();
-        if (height != static_cast<int>(img->getHeight()))
+        if (height != h)
             throw std::exception();
     }
 }
@@ -109,7 +111,7 @@ template<typename T>
 void DicomReader::configureNormalization(DicomImage *img) {
     T min, max;
     size_t size;
-    auto *data = (T *) img->getOutputData(sizeof(T) * 8);
+    auto *data = getOutputData<T>(img);
     std::tie(min, max, size) = getRange<T>(data);
     if (min < this->min)
         this->min = min;
@@ -168,7 +170,7 @@ template<typename T>
 cv::Mat DicomReader::createMat(DicomImage *img, int cv_type) const {
     void *data;
 
-    auto *img_data = (T *) img->getOutputData(sizeof(T) * 8);
+    auto *img_data = getOutputData<T>(img);
     switch (cv_type) {
         case CV_8U:
             data = normalize<T, uint8_t>(img_data);
@@ -187,6 +189,12 @@ cv::Mat DicomReader::createMat(DicomImage *img, int cv_type) const {
     }
 
     return cv::Mat(height, width, cv_type, data);
+}
+
+template<typename T>
+const T *DicomReader::getOutputData(DicomImage *img) const
+{
+    return (const T *) img->getOutputData(sizeof(T) * 8);
 }
 
 
