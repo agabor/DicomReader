@@ -8,7 +8,7 @@
 #include <opencv2/core/core.hpp>
 
 void DicomReader::addFile(const char *file_name) {
-    images.emplace_back(new DicomImage(file_name));
+    images.push_back(new DicomImage(file_name));
 }
 
 template <typename T>
@@ -194,7 +194,7 @@ cv::Mat DicomReader::createMat(DicomImage *img, int cv_type) const {
 template<typename T>
 const T *DicomReader::getOutputData(DicomImage *img) const
 {
-    return (const T *) img->getOutputData(sizeof(T) * 8);
+    return static_cast<const T*>(img->getOutputData(sizeof(T) * 8));
 }
 
 
