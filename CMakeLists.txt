@@ -14,6 +14,8 @@ target_link_libraries(cv_test opencv_highgui)
 target_link_libraries(cv_test opencv_features2d)
 target_link_libraries(cv_test opencv_nonfree)
 target_link_libraries(cv_test opencv_calib3d)
+target_link_libraries(cv_test opencv_flann)
+target_link_libraries(cv_test opencv_imgproc)
 target_link_libraries(cv_test Qt5::Widgets)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")

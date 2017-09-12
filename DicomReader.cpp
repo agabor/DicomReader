@@ -12,21 +12,20 @@ void DicomReader::addFile(const char *file_name) {
 }
 
 template <typename T>
-std::tuple<T,T, size_t> getRange(const T* data) {
-    size_t i = 0;
-    T item = data[i];
+std::tuple<T,T> getRange(const T* data, size_t size) {
+    T item = data[0];
     T min = item;
     T max = item;
-    while(item != 0) {
+    for (size_t i = 1; i < size; ++i) {
+        item = data[i];
         if (item < min) {
             min = item;
         }
         if (item > max) {
             max = item;
         }
-        item = data[++i];
     }
-    return std::tuple<T,T, size_t>(min, max, i);
+    return std::tuple<T,T>(min, max);
 }
 
 template <typename IT, typename OT>
@@ -110,9 +109,9 @@ void DicomReader::configureNormalization(DicomImage *img) {
 template<typename T>
 void DicomReader::configureNormalization(DicomImage *img) {
     T min, max;
-    size_t size;
+    size_t size = (size_t)width * (size_t)height;
     auto *data = getOutputData<T>(img);
-    std::tie(min, max, size) = getRange<T>(data);
+    std::tie(min, max) = getRange<T>(data, size);
     if (min < this->min)
         this->min = min;
     if (max > this->max)
