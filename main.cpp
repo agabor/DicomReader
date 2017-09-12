@@ -7,11 +7,7 @@
 #include "DicomReader.h"
 #include <iostream>
 #include <qt5/QtWidgets/QApplication>
-#include <qt5/QtWidgets/QMainWindow>
-#include <qt5/QtWidgets/QLabel>
-#include <qt5/QtWidgets/QLayout>
-#include <qt5/QtWidgets/QVBoxLayout>
-#include <qt5/QtGui/QImage>
+#include "MainWindow.h"
 
 
 using namespace cv;
@@ -28,7 +24,7 @@ int main(int argc, char** argv)
     r.config();
     cv::Mat image = r.read(CV_8U)[0];
 
-    int minHessian = 400;
+    int minHessian = 250;
 
     cv::SurfFeatureDetector detector( minHessian );
 
@@ -54,15 +50,9 @@ int main(int argc, char** argv)
 }
 
 void show(const Mat &image) {
-    QMainWindow *window = new QMainWindow;
-    window->setMinimumSize(image.cols, image.rows);
-    QLabel *label = new QLabel;
-    label->setFixedSize(image.cols, image.rows);
-    window->setLayout(new QVBoxLayout);
-    window->layout()->addWidget(label);
+    auto *window = new MainWindow;
 
-    label->setPixmap(
-            QPixmap::fromImage(QImage(image.data, image.cols, image.rows, int(image.step), QImage::Format_RGB888)));
+    window->setImage(image);
 
     window->show();
 }
