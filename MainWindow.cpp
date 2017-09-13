@@ -55,7 +55,8 @@ void MainWindow::init(QStringList files) {
         i->scan(detector);
         images.push_back(i);
     }
-    setImage(images[0]->mat);
+    currentImage = images[0];
+    setImage(currentImage->mat);
 
     connect(filesView, &QListView::activated,[=]( const QModelIndex &index ) {
         currentImage = images[index.row()];

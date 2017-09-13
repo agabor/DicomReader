@@ -1,6 +1,7 @@
 #include "Image.h"
 #include "DicomReader.h"
 #include <iostream>
+#include <vector>
 
 using namespace cv;
 using namespace std;
@@ -63,8 +64,25 @@ void Image::scan(cv::SurfFeatureDetector &detector) {
     }
 }
 
+class MatchList : public vector<DMatch> {
+public:
+    MatchList(const Mat &descriptors1, const Mat &descriptors2) {
+        MatchList &matches = *this;
+        FlannBasedMatcher().match(descriptors1, descriptors2, matches, Mat());
+        for (auto &m : matches) {
+            edges[m.queryIdx] = m.trainIdx;
+        }
+    }
+
+    bool has(int a, int b){
+        return edges[a] == b;
+    }
+    
+private:
+    map<int, int> edges;
+};
+
 tuple<int, Mat> Image::match(const Image &other) const {
-    FlannBasedMatcher matcher;
 
     vector<KeyPoint> mkpoints1;
     vector<KeyPoint> mkpoints2;
@@ -85,29 +103,13 @@ tuple<int, Mat> Image::match(const Image &other) const {
 
         auto descriptors2 = it2->second;
 
-        vector<DMatch> matches;
-        matcher.match(descriptors1, descriptors2, matches);
-        vector<DMatch> matches_back;
-        matcher.match(descriptors2, descriptors1, matches_back);
-        vector<DMatch> matches_scaled;
-        matcher.match(scaled_descriptors.at(octave), other.scaled_descriptors.at(octave), matches_scaled);
-
-
-        map<int, int> bm;
-        for (auto &m : matches_back) {
-            bm[m.queryIdx] = m.trainIdx;
-        }
-
-
-        map<int, int> sm;
-        for (auto &m : matches_scaled) {
-            sm[m.queryIdx] = m.trainIdx;
-        }
-
+        MatchList matches(descriptors1, descriptors2);
+        MatchList matches_back(descriptors2, descriptors1);
+        MatchList matches_scaled(scaled_descriptors.at(octave), other.scaled_descriptors.at(octave));
 
         for (int i = 0; i < matches.size(); ++i) {
             auto match = matches[i];
-            if (bm[match.trainIdx] == match.queryIdx && sm[match.queryIdx] == match.trainIdx) {
+            if (matches_back.has(match.trainIdx, match.queryIdx) && matches_scaled.has(match.queryIdx, match.trainIdx)) {
                 mkpoints1.push_back(keypoints.at(octave)[match.queryIdx]);
                 mkpoints2.push_back(other.keypoints.at(octave)[match.trainIdx]);
                 match.queryIdx = static_cast<int>(mkpoints1.size() - 1);
