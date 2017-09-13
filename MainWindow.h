@@ -8,10 +8,18 @@
 
 #include <opencv2/core/core.hpp>
 #include <qt5/QtWidgets/QMainWindow>
+#include <QLabel>
+#include <QtWidgets/QListView>
+#include "Image.h"
 
 class MainWindow : public QMainWindow {
 public:
-    void setImage(cv::Mat image);
+    void init(QStringList files);
+    void setImage(cv::Mat &image);
+private:
+    QLabel *imageLabel;
+    QListView *filesView;
+    QVector<Image*> images;
 };
 
 

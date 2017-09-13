@@ -5,7 +5,7 @@ find_package(Qt5Core REQUIRED)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SOURCE_FILES main.cpp DicomReader.cpp DicomReader.h MainWindow.cpp MainWindow.h)
+set(SOURCE_FILES main.cpp DicomReader.cpp DicomReader.h MainWindow.cpp MainWindow.h Image.h)
 add_executable(cv_test ${SOURCE_FILES})
 target_link_libraries(cv_test dcmdata)
 target_link_libraries(cv_test dcmimgle)
