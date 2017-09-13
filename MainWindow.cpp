@@ -16,7 +16,6 @@ using namespace cv;
 using namespace Qt;
 
 void MainWindow::setImage(Mat &image) {
-    setMinimumSize(image.cols, image.rows);
     imageLabel->setFixedSize(image.cols, image.rows);
 
     imageLabel->setPixmap(
@@ -26,17 +25,25 @@ void MainWindow::setImage(Mat &image) {
 void MainWindow::init(QStringList files) {
     imageLabel = new QLabel;
     setCentralWidget(imageLabel);
-    QDockWidget *dock = new QDockWidget(QObject::tr("Files"), this);
-    dock->setFeatures(QDockWidget::DockWidgetMovable |QDockWidget::DockWidgetFloatable);
-    filesView = new QListView(dock);
-    dock->setWidget(filesView);
+
+    QDockWidget *left_dock = new QDockWidget(QObject::tr("Files"), this);
+    left_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    filesView = new QListView(left_dock);
+    left_dock->setWidget(filesView);
     auto m = new QStringListModel();
     m->setStringList(files);
     filesView->setModel(m);
-    addDockWidget(Qt::LeftDockWidgetArea, dock);
+    addDockWidget(Qt::LeftDockWidgetArea, left_dock);
+
+    QDockWidget *right_dock = new QDockWidget(QObject::tr("Files"), this);
+    right_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    filteredView = new QListView(right_dock);
+    right_dock->setWidget(filteredView);
+    addDockWidget(Qt::RightDockWidgetArea, right_dock);
+
 
     QDockWidget *button_dock = new QDockWidget(this);
-    button_dock->setFeatures(0);
+    button_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
     button_dock->setWidget(new QPushButton(QObject::tr("Filter"), button_dock));
     addDockWidget(Qt::BottomDockWidgetArea, button_dock);
     for (auto& file : files) {

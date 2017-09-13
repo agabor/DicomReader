@@ -19,6 +19,8 @@ public:
 private:
     QLabel *imageLabel;
     QListView *filesView;
+    QListView *filteredView;
+    QVector<Image*> matches;
     QVector<Image*> images;
 };
 
