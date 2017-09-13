@@ -15,13 +15,13 @@
 #include <map>
 #include <tuple>
 
-#define OCTAVES 8
+#define OCTAVES 4
 
 class Image {
 public:
     explicit Image(const char* file_name);
     void resize();
-    void scan(cv::SurfFeatureDetector &detector);
+    void scan();
     std::tuple<int, cv::Mat> match(const Image &other) const;
 
     cv::Mat mat;

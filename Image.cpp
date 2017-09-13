@@ -13,9 +13,9 @@ Image::Image(const char *file_name) {
     r.addFile(file_name);
     r.config();
     mat= r.read(CV_8U)[0];
-    Mat contr(mat.rows, mat.cols, mat.type());
-    mat.convertTo(contr, -1, 3);
-    mat = contr;
+    //Mat contr(mat.rows, mat.cols, mat.type());
+    //mat.convertTo(contr, -1, 3);
+    //mat = contr;
     resize();
 }
 
@@ -34,14 +34,30 @@ void addKeyPoint(const KeyPoint &k, map<int, vector<KeyPoint>> &kpmap) {
     kpmap[k.octave].push_back(k);
 }
 
-void Image::scan(cv::SurfFeatureDetector &detector) {
+
+
+float getScale(int octave) {
+    switch (octave) {
+        case 0: return 4;
+        case 1: return 3;
+        case 2: return 3;
+        case 3: return 2;
+        case 4: return 2;
+        default: return 2;
+    }
+}
+
+void Image::scan() {
+
+    cv::SurfFeatureDetector detector{300, OCTAVES,1};
+
     vector<KeyPoint> points;
     detector.detect( mat, points );
 
     for(auto &k : points) {
         addKeyPoint(k, keypoints);
         KeyPoint scaled;
-        scaled.size = k.size * (5.0f - k.octave);
+        scaled.size = k.size * getScale(k.octave);
         scaled.octave = k.octave;
         scaled.response = k.response;
         scaled.angle = k.angle;
@@ -80,6 +96,14 @@ public:
         return it->second == b;
     }
 
+    float getDist(int a, int b) {
+        for (auto &m : *this) {
+            if (m.queryIdx == a && m.trainIdx == b)
+                return m.distance;
+        }
+        return -1.0f;
+    }
+
     MatchList filter(const MatchList &reverse){
         MatchList result;
         for (auto &m : *this) {
@@ -113,7 +137,7 @@ tuple<int, Mat> Image::match(const Image &other) const {
     vector<KeyPoint> mkpoints2;
     vector<DMatch> aggr_matches;
 
-    for (int octave = OCTAVES; octave > 0; --octave) {
+    for (int octave = OCTAVES; octave >= 0; --octave) {
 
         auto it1 = descriptors.find(octave);
         if (it1 == descriptors.end())
@@ -136,10 +160,10 @@ tuple<int, Mat> Image::match(const Image &other) const {
             if (matches_scaled.has(match.queryIdx, match.trainIdx)) {
                 mkpoints1.push_back(keypoints.at(octave)[match.queryIdx]);
                 mkpoints2.push_back(other.keypoints.at(octave)[match.trainIdx]);
+                //cout << match.distance << " " << matches_scaled.getDist(match.queryIdx, match.trainIdx) << endl;
                 match.queryIdx = static_cast<int>(mkpoints1.size() - 1);
                 match.trainIdx = static_cast<int>(mkpoints2.size() - 1);
                 aggr_matches.push_back(match);
-                cout << match.distance << " " << matches_scaled[i].distance << endl;
             }
         }
 

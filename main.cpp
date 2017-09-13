@@ -1,13 +1,9 @@
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include "opencv2/nonfree/nonfree.hpp"
-#include <opencv2/calib3d/calib3d.hpp>
 #include "DicomReader.h"
 #include <iostream>
 #include <qt5/QtWidgets/QApplication>
+#include <QtWidgets/QFileDialog>
 #include "MainWindow.h"
 
 
@@ -23,9 +19,16 @@ int main(int argc, char** argv)
     QApplication app(argc, argv);
     auto *window = new MainWindow;
 
-    window->init(QStringList() << "../test.dcm" << "../test2.dcm" << "../test3.dcm" << "../test4.dcm");
 
     window->show();
+
+    QString dirPath = QFileDialog::getExistingDirectory(window, QObject::tr("Open Directory"),
+                                                    "/home",
+                                                    QFileDialog::ShowDirsOnly
+                                                    | QFileDialog::DontResolveSymlinks);
+    QDir dir(dirPath);
+
+    window->init(dir, dir.entryList());
 
     return app.exec();
 }

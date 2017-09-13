@@ -13,11 +13,10 @@ void DicomReader::addFile(const char *file_name) {
 
 template <typename T>
 std::tuple<T,T> getRange(const T* data, size_t size) {
-    T item = data[0];
-    T min = item;
-    T max = item;
-    for (size_t i = 1; i < size; ++i) {
-        item = data[i];
+    T min = -1;
+    T max = 0;
+    for (size_t i = 0; i < size; ++i) {
+        T item = data[i];
         if (item < min) {
             min = item;
         }
@@ -35,7 +34,8 @@ OT* DicomReader::normalize(const IT* data) const {
     IT d = (IT)max - (IT)min;
     auto m =(double)maxval/(double)d;
     for( size_t i = 0; i < size; ++i){
-        normd[i] = (data[i] - min) * m;
+        OT x = (data[i] - min) * m;
+        normd[i] = x;
     }
     return normd;
 }
@@ -194,6 +194,12 @@ template<typename T>
 const T *DicomReader::getOutputData(DicomImage *img) const
 {
     return static_cast<const T*>(img->getOutputData(sizeof(T) * 8));
+}
+
+bool DicomReader::isDicomFile(const char *file_name) {
+    DicomImage img(file_name);
+    EI_Status status = img.getStatus();
+    return status == EIS_Normal;
 }
 
 

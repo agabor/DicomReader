@@ -10,11 +10,12 @@
 #include <qt5/QtWidgets/QMainWindow>
 #include <QLabel>
 #include <QtWidgets/QListView>
+#include <QtCore/QDir>
 #include "Image.h"
 
 class MainWindow : public QMainWindow {
 public:
-    void init(QStringList files);
+    void init(QDir base_dir, QStringList files);
     void setImage(cv::Mat &image);
 private:
     QLabel *imageLabel;

@@ -12,6 +12,7 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
 #include <tuple>
+#include "DicomReader.h"
 
 using namespace cv;
 using namespace std;
@@ -24,7 +25,7 @@ void MainWindow::setImage(Mat &image) {
     imageLabel->setPixmap(QPixmap::fromImage(qImage));
 }
 
-void MainWindow::init(QStringList files) {
+void MainWindow::init(QDir base_dir, QStringList files) {
     imageLabel = new QLabel;
     setCentralWidget(imageLabel);
 
@@ -32,9 +33,6 @@ void MainWindow::init(QStringList files) {
     left_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
     filesView = new QListView(left_dock);
     left_dock->setWidget(filesView);
-    auto m = new QStringListModel();
-    m->setStringList(files);
-    filesView->setModel(m);
     addDockWidget(Qt::LeftDockWidgetArea, left_dock);
 
     QDockWidget *right_dock = new QDockWidget(QObject::tr("Files"), this);
@@ -49,12 +47,23 @@ void MainWindow::init(QStringList files) {
     QPushButton *button = new QPushButton(QObject::tr("Filter"), button_dock);
     button_dock->setWidget(button);
     addDockWidget(Qt::BottomDockWidgetArea, button_dock);
-    cv::SurfFeatureDetector detector{200,OCTAVES,1};
+
+    QStringList dicomFiles;
     for (auto& file : files) {
-        Image *i = new Image(file.toLatin1().data());
-        i->scan(detector);
-        images.push_back(i);
+        const QString absoluteFilePath = base_dir.absoluteFilePath(file);
+        if (DicomReader::isDicomFile(absoluteFilePath.toLatin1().data())) {
+
+            dicomFiles << file;
+            auto *i = new Image(absoluteFilePath.toLatin1().data());
+
+            i->scan();
+            images.push_back(i);
+        }
     }
+
+    auto m = new QStringListModel();
+    m->setStringList(dicomFiles);
+    filesView->setModel(m);
     currentImage = images[0];
     setImage(currentImage->mat);
 

@@ -16,6 +16,7 @@ class DicomImage;
 
 class DicomReader {
 public:
+    static bool isDicomFile(const char* file_name);
     void addFile(const char* file_name);
     void config();
     std::vector<cv::Mat> read(int cv_type = -1);
