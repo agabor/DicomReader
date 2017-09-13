@@ -10,6 +10,7 @@
 #include <qt5/QtWidgets/QApplication>
 #include "MainWindow.h"
 
+#define OCTAVES 8
 
 using namespace cv;
 using namespace std;
@@ -25,7 +26,9 @@ public:
         r.addFile(file_name);
         r.config();
         mat= r.read(CV_8U)[0];
-
+        Mat contr(mat.rows, mat.cols, mat.type());
+        mat.convertTo(contr, -1, 3);
+        mat = contr;
     }
 
 
@@ -38,48 +41,29 @@ public:
     }
 
     void scan(cv::SurfFeatureDetector &detector){
-        detector.detect( mat, keypoints );
+        vector<KeyPoint> points;
+        detector.detect( mat, points );
 
-        double avg = 0;
-        float min = 100000;
-        float max = 0;
-
-        double ravg = 0;
-        float rmin = 100000;
-        float rmax = 0;
-
-        sort(keypoints.begin(), keypoints.end(),
-             [](const KeyPoint & a, const KeyPoint & b) -> bool
-             {
-                 return a.response > b.response;
-             });
-
-        //keypoints.resize(20);
-
-        map<int, int> h;
-        for(auto &k : keypoints) {
-            if (h.find(k.size) == h.end())
-                h[k.size] = 1;
-            else
-                h[k.size] += 1;
+        for(auto &k : points) {
+            if (keypoints.find(k.octave) == keypoints.end())
+                keypoints[k.octave] = vector<KeyPoint>();
+            keypoints[k.octave].push_back(k);
         }
 
-        for (auto &i : h) {
-            cout << "(" << i.first << ", " << i.second << ")" << endl;
-        }
-
-        cout << endl;
-        cout << endl;
 
         SurfDescriptorExtractor extractor;
-        extractor.compute( mat, keypoints, descriptors );
+        for (auto item : keypoints) {
+            Mat desc;
+            extractor.compute(mat, item.second, desc);
+            descriptors[item.first] = desc;
+        }
     }
 
     cv::Mat mat;
-    std::vector<KeyPoint> keypoints;
-    cv::Mat descriptors;
+    map<int,vector<KeyPoint>> keypoints;
+    map<int,Mat> descriptors;
 };
-Mat match(const Image &img1, const Image &img2);
+Mat match(Image &img1, Image &img2);
 
 int main(int argc, char** argv)
 {
@@ -91,86 +75,91 @@ int main(int argc, char** argv)
     //cv::Mat dst;               // dst must be a different Mat
     //cv::flip(img2.mat, dst, 1);
     //img2.mat = dst;
-    Image img3("../test3.dcm");
+    /*Image img3("../test3.dcm");
     img3.resize(img1);
     Image img4("../test4.dcm");
-    img4.resize(img1);
+    img4.resize(img1);*/
 
 
 
-    cv::SurfFeatureDetector detector{100,16,8};
+    cv::SurfFeatureDetector detector{200,OCTAVES,1};
 
     img1.scan(detector);
     img2.scan(detector);
-    img3.scan(detector);
-    img4.scan(detector);
+    //img3.scan(detector);
+    //img4.scan(detector);
     Mat img_matches12 = match(img1, img2);
-    Mat img_matches13 = match(img1, img3);
-    Mat img_matches13r(img_matches12.rows, img_matches12.cols, img_matches12.type());
-    cv::resize(img_matches13, img_matches13r, img_matches13r.size());
+    //Mat img_matches13 = match(img1, img3);
+    //Mat img_matches13r(img_matches12.rows, img_matches12.cols, img_matches12.type());
+    //cv::resize(img_matches13, img_matches13r, img_matches13r.size());
 
-    Mat img_matches14 = match(img1, img4);
-    Mat img_matches14r(img_matches12.rows, img_matches12.cols, img_matches12.type());
-    cv::resize(img_matches14, img_matches14r, img_matches14r.size());
+    //Mat img_matches14 = match(img1, img4);
+    //Mat img_matches14r(img_matches12.rows, img_matches12.cols, img_matches12.type());
+    //cv::resize(img_matches14, img_matches14r, img_matches14r.size());
 
-    Mat img_matches;
-    vconcat(img_matches12, img_matches13r, img_matches);
-    vconcat(img_matches, img_matches14r, img_matches);
+    //Mat img_matches;
+    //vconcat(img_matches12, img_matches13r, img_matches);
+    //vconcat(img_matches, img_matches14r, img_matches);
 
     QApplication app(argc, argv);
-    show(img_matches);
+    //show(img_matches12);
 
     return app.exec();
 }
 
-Mat match(const Image &img1, const Image &img2) {//-- Step 3: Matching descriptor vectors using FLANN matcher
+Mat match(Image &img1, Image &img2) {//-- Step 3: Matching descriptor vectors using FLANN matcher
     FlannBasedMatcher matcher;
-    vector<DMatch> matches;
-    matcher.match(img1.descriptors, img2.descriptors, matches);
-    vector<DMatch> matches_back;
-    matcher.match(img2.descriptors, img1.descriptors, matches_back);
+
+    for (int octave = OCTAVES; octave > 1; --octave) {
+
+        auto it1 = img1.descriptors.find(octave);
+        if (it1 == img1.descriptors.end())
+            continue;
+
+        auto descriptors1 = it1->second;
 
 
-    map<int,int> bm;
-    for (auto &m : matches_back) {
-        bm[m.queryIdx] = m.trainIdx;
-    }
+        auto it2 = img2.descriptors.find(octave);
+        if (it2 == img2.descriptors.end())
+            continue;
+
+        auto descriptors2 = it2->second;
+
+        vector<DMatch> matches;
+        matcher.match(descriptors1, descriptors2, matches);
+        vector<DMatch> matches_back;
+        matcher.match(descriptors2, descriptors1, matches_back);
 
 
-    //cout << "m: " << matches.size() << endl;
-    //-- Draw only "good" matches (i.e. whose distance is less than 3*min_dist )
-    vector<DMatch> good_matches;
-
-    for (auto &matche : matches) {
-        auto s1 = img1.keypoints[matche.queryIdx].size;
-        auto s2 = img2.keypoints[matche.trainIdx].size;
-        float m = max(s2, s1) / min(s2, s1);
-        if (matche.distance < 0.3 && m < 1.5 && bm[matche.trainIdx] == matche.queryIdx) {
-            good_matches.push_back(matche);
+        map<int, int> bm;
+        for (auto &m : matches_back) {
+            bm[m.queryIdx] = m.trainIdx;
         }
+
+
+        vector<DMatch> good_matches;
+        for (auto &matche : matches) {
+            if (bm[matche.trainIdx] == matche.queryIdx) {
+                good_matches.push_back(matche);
+            }
+        }
+        Mat imk1, imk2;
+        drawKeypoints(img1.mat, img1.keypoints[octave], imk1, Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        drawKeypoints(img2.mat, img2.keypoints[octave], imk2, Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        Mat img_matches;
+        drawMatches(imk1, img1.keypoints[octave], imk2, img2.keypoints[octave],
+                    good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                    vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+        cv::imshow("m", img_matches);
+        cv::waitKey(0);
     }
+    //cout << "gm: " << good_matches.size() << endl;
 
-    //-- Quick calculation of max and min distances between keypoints
-    /*
-
-
-    double max_dist = 0;
-    double min_dist = 100;
-     for (auto &matche : good_matches) {
-        double dist = matche.distance;
-        if (dist < min_dist) min_dist = dist;
-        if (dist > max_dist) max_dist = dist;
-    }*/
-
-    //printf("-- Max dist : %f \n", max_dist);
-    //printf("-- Min dist : %f \n", min_dist);
-    cout << "gm: " << good_matches.size() << endl;
-
-    Mat img_matches;
+    /*Mat img_matches;
     drawMatches(img1.mat, img1.keypoints, img2.mat, img2.keypoints,
                 good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-    return img_matches;
+    return img_matches;*/
 }
 
 void show(const Mat &image) {
