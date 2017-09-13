@@ -41,7 +41,7 @@ void Image::scan(cv::SurfFeatureDetector &detector) {
     for(auto &k : points) {
         addKeyPoint(k, keypoints);
         KeyPoint scaled;
-        scaled.size = k.size * (6.0d - k.octave);
+        scaled.size = k.size * (5.0f - k.octave);
         scaled.octave = k.octave;
         scaled.response = k.response;
         scaled.angle = k.angle;
@@ -67,20 +67,45 @@ void Image::scan(cv::SurfFeatureDetector &detector) {
 class MatchList : public vector<DMatch> {
 public:
     MatchList(const Mat &descriptors1, const Mat &descriptors2) {
-        MatchList &matches = *this;
-        FlannBasedMatcher().match(descriptors1, descriptors2, matches, Mat());
-        for (auto &m : matches) {
+        FlannBasedMatcher().match(descriptors1, descriptors2, *this, Mat());
+        fillEdges();
+    }
+
+    MatchList() = default;
+
+    bool has(int a, int b) const {
+        auto it = edges.find(a);
+        if (it == edges.end())
+            return false;
+        return it->second == b;
+    }
+
+    MatchList filter(const MatchList &reverse){
+        MatchList result;
+        for (auto &m : *this) {
+         if (reverse.has(m.trainIdx, m.queryIdx))
+             result.push_back(m);
+        }
+        result.fillEdges();
+        return result;
+    }
+
+private:
+
+    void fillEdges() {
+        for (auto &m : *this) {
             edges[m.queryIdx] = m.trainIdx;
         }
     }
 
-    bool has(int a, int b){
-        return edges[a] == b;
-    }
-    
-private:
     map<int, int> edges;
 };
+
+MatchList getReverseFilteredMatchList(const Mat &descriptors1, const Mat &descriptors2) {
+    MatchList matches(descriptors1, descriptors2);
+    MatchList matches_back(descriptors2, descriptors1);
+    return matches.filter(matches_back);
+}
 
 tuple<int, Mat> Image::match(const Image &other) const {
 
@@ -103,13 +128,12 @@ tuple<int, Mat> Image::match(const Image &other) const {
 
         auto descriptors2 = it2->second;
 
-        MatchList matches(descriptors1, descriptors2);
-        MatchList matches_back(descriptors2, descriptors1);
-        MatchList matches_scaled(scaled_descriptors.at(octave), other.scaled_descriptors.at(octave));
+        MatchList matches = getReverseFilteredMatchList(descriptors1, descriptors2);
+        MatchList matches_scaled = getReverseFilteredMatchList(scaled_descriptors.at(octave), other.scaled_descriptors.at(octave));
 
         for (int i = 0; i < matches.size(); ++i) {
             auto match = matches[i];
-            if (matches_back.has(match.trainIdx, match.queryIdx) && matches_scaled.has(match.queryIdx, match.trainIdx)) {
+            if (matches_scaled.has(match.queryIdx, match.trainIdx)) {
                 mkpoints1.push_back(keypoints.at(octave)[match.queryIdx]);
                 mkpoints2.push_back(other.keypoints.at(octave)[match.trainIdx]);
                 match.queryIdx = static_cast<int>(mkpoints1.size() - 1);
