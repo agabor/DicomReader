@@ -15,10 +15,11 @@ Image::Image(const char *file_name) {
     Mat contr(mat.rows, mat.cols, mat.type());
     mat.convertTo(contr, -1, 3);
     mat = contr;
+    resize();
 }
 
-void Image::resize(const Image &templ)  {
-    double m = sqrt(double(templ.mat.rows * templ.mat.cols) / double(mat.rows * mat.cols));
+void Image::resize()  {
+    double m = sqrt(double(400000) / double(mat.rows * mat.cols));
     cv::Mat dest(static_cast<int>(mat.rows * m), static_cast<int>(mat.cols * m), CV_8U);
     cv::resize(mat, dest, dest.size());
     mat = dest;

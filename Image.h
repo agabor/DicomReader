@@ -20,7 +20,7 @@
 class Image {
 public:
     explicit Image(const char* file_name);
-    void resize(const Image &templ);
+    void resize();
     void scan(cv::SurfFeatureDetector &detector);
     std::tuple<int, cv::Mat> match(const Image &other) const;
 

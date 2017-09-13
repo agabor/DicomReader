@@ -11,15 +11,17 @@
 #include <QtCore/QStringListModel>
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
+#include <tuple>
 
 using namespace cv;
+using namespace std;
 using namespace Qt;
 
 void MainWindow::setImage(Mat &image) {
     imageLabel->setFixedSize(image.cols, image.rows);
-
-    imageLabel->setPixmap(
-            QPixmap::fromImage(QImage(image.data, image.cols, image.rows, int(image.step), image.type() == CV_8U ? QImage::Format_Grayscale8 : QImage::Format_RGB888)));
+    auto format = image.type() == CV_8U ? QImage::Format_Grayscale8 : QImage::Format_RGB888;
+    const QImage &qImage = QImage(image.data, image.cols, image.rows, int(image.step), format);
+    imageLabel->setPixmap(QPixmap::fromImage(qImage));
 }
 
 void MainWindow::init(QStringList files) {
@@ -44,13 +46,45 @@ void MainWindow::init(QStringList files) {
 
     QDockWidget *button_dock = new QDockWidget(this);
     button_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-    button_dock->setWidget(new QPushButton(QObject::tr("Filter"), button_dock));
+    QPushButton *button = new QPushButton(QObject::tr("Filter"), button_dock);
+    button_dock->setWidget(button);
     addDockWidget(Qt::BottomDockWidgetArea, button_dock);
+    cv::SurfFeatureDetector detector{200,OCTAVES,1};
     for (auto& file : files) {
-        images.push_back(new Image(file.toLatin1().data()));
+        Image *i = new Image(file.toLatin1().data());
+        i->scan(detector);
+        images.push_back(i);
     }
     setImage(images[0]->mat);
 
-    connect(filesView, &QListView::activated,[=]( const QModelIndex &index ) { setImage(images[index.row()]->mat);} );
+    connect(filesView, &QListView::activated,[=]( const QModelIndex &index ) {
+        currentImage = images[index.row()];
+        setImage(currentImage->mat);
+    });
+
+    connect(button, &QPushButton::pressed,[=]( ) {
+        matches.clear();
+        QStringList names;
+        for (auto img : images) {
+            if (img == currentImage)
+                continue;
+            int count;
+            Mat mimg;
+            tie(count, mimg) = currentImage->match(*img);
+            if (count > 0) {
+                names << QString::number(count);
+                matches.push_back(mimg);
+            }
+        }
+
+        auto model = new QStringListModel();
+        model->setStringList(names);
+        filteredView->setModel(model);
+    });
+
+
+    connect(filteredView, &QListView::activated,[=]( const QModelIndex &index ) {
+        setImage(matches[index.row()]);
+    });
 }
 

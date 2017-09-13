@@ -20,8 +20,9 @@ private:
     QLabel *imageLabel;
     QListView *filesView;
     QListView *filteredView;
-    QVector<Image*> matches;
+    QVector<cv::Mat> matches;
     QVector<Image*> images;
+    Image* currentImage;
 };
 
 
