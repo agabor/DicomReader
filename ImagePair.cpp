@@ -13,48 +13,10 @@
 using namespace cv;
 using namespace std;
 
-ImagePair::ImagePair(std::shared_ptr<Image> a, std::shared_ptr<Image> b) {
+ImagePair::ImagePair(const MatchSettings &settings, std::shared_ptr<Image> a, std::shared_ptr<Image> b) : settings(settings) {
     image_a = std::move(a);
     image_b = std::move(b);
 }
-
-class MatchList : public vector<DMatch> {
-public:
-    MatchList(const Mat &descriptors1, const Mat &descriptors2) {
-        BFMatcher matcher;
-        matcher.match(descriptors1, descriptors2, *this, Mat());
-        fillEdges();
-    }
-
-    MatchList() = default;
-
-    bool has(int a, int b) const {
-        auto it = edges.find(a);
-        if (it == edges.end())
-            return false;
-        return it->second == b;
-    }
-
-    MatchList filter(const MatchList &reverse){
-        MatchList result;
-        for (auto &m : *this) {
-            if (reverse.has(m.trainIdx, m.queryIdx))
-                result.push_back(m);
-        }
-        result.fillEdges();
-        return result;
-    }
-
-private:
-
-    void fillEdges() {
-        for (auto &m : *this) {
-            edges[m.queryIdx] = m.trainIdx;
-        }
-    }
-
-    map<int, int> edges;
-};
 
 
 MatchList getReverseFilteredMatchList(const Mat &descriptors1, const Mat &descriptors2) {
@@ -77,10 +39,10 @@ Mat drawKeypoints(const vector<KeyPoint> &keypoints, Mat &image)  {
 }
 
 
-tuple<int, Mat> ImagePair::match(const MatchSettings &settings) {
+tuple<int, Mat> ImagePair::match() {
 
     for (int octave = OCTAVES; octave >= 0; --octave) {
-        matchOctave(settings, octave);
+        matchOctave(octave);
     }
 
 
@@ -100,39 +62,54 @@ tuple<int, Mat> ImagePair::match(const MatchSettings &settings) {
     return tuple<int, Mat>(aggr_matches.size(), img_matches);
 }
 
-void ImagePair::matchOctave(const MatchSettings &settings, int octave) {
+void ImagePair::matchOctave(int octave) {
+    MatchList matches = getMatchList(octave);
+    if (matches.empty())
+        return;
+
+    MatchList matches_scaled;
+    if (settings.scale) {
+        matches_scaled = getScaledMatchList(octave);
+    }
+
+    for (size_t i = 0; i < matches.size(); ++i) {
+        auto match = matches[i];
+        if (!settings.scale || matches_scaled.has(match.queryIdx, match.trainIdx)) {
+            acceptMatch(octave, match);
+        }
+    }
+}
+
+void ImagePair::acceptMatch(int octave, const DMatch &match) {
+    matchedKeyPoints1.push_back(image_a->keypoints.at(octave)[match.queryIdx]);
+    matchedKeyPoints2.push_back(image_b->keypoints.at(octave)[match.trainIdx]);
+    auto queryIdx = static_cast<int>(matchedKeyPoints1.size() - 1);
+    auto trainIdx = static_cast<int>(matchedKeyPoints2.size() - 1);
+    aggr_matches.emplace_back(queryIdx, trainIdx, match.distance);
+    if (settings.scale) {
+        matchedScaledKeyPoints1.push_back(image_a->scaled_keypoints.at(octave)[match.queryIdx]);
+        matchedScaledKeyPoints2.push_back(image_b->scaled_keypoints.at(octave)[match.trainIdx]);
+    }
+}
+
+MatchList ImagePair::getScaledMatchList(int octave) const {
+    return ::getMatchList(image_a->scaled_descriptors.at(octave),
+                          image_b->scaled_descriptors.at(octave), settings);
+}
+
+MatchList ImagePair::getMatchList(int octave) const {
     auto it1 = image_a->descriptors.find(octave);
     if (it1 == image_a->descriptors.end())
-        return;
+        return MatchList();
 
     auto descriptors1 = it1->second;
 
 
     auto it2 = image_b->descriptors.find(octave);
     if (it2 == image_b->descriptors.end())
-        return;
+        return MatchList();
 
     auto descriptors2 = it2->second;
 
-    MatchList matches = getMatchList(descriptors1, descriptors2, settings);
-    MatchList matches_scaled;
-    if (settings.scale) {
-            matches_scaled = getMatchList(image_a->scaled_descriptors.at(octave),
-                                          image_b->scaled_descriptors.at(octave), settings);
-        }
-
-    for (size_t i = 0; i < matches.size(); ++i) {
-            auto match = matches[i];
-            if (!settings.scale || matches_scaled.has(match.queryIdx, match.trainIdx)) {
-                matchedKeyPoints1.push_back(image_a->keypoints.at(octave)[match.queryIdx]);
-                matchedKeyPoints2.push_back(image_b->keypoints.at(octave)[match.trainIdx]);
-                auto queryIdx = static_cast<int>(matchedKeyPoints1.size() - 1);
-                auto trainIdx = static_cast<int>(matchedKeyPoints2.size() - 1);
-                aggr_matches.emplace_back(queryIdx, trainIdx, match.distance);
-                if (settings.scale) {
-                    matchedScaledKeyPoints1.push_back(image_a->scaled_keypoints.at(octave)[match.queryIdx]);
-                    matchedScaledKeyPoints2.push_back(image_b->scaled_keypoints.at(octave)[match.trainIdx]);
-                }
-            }
-        }
+    return ::getMatchList(descriptors1, descriptors2, settings);
 }

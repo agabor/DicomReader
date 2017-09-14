@@ -114,12 +114,12 @@ void MainWindow::runFeatureMatching() {
             continue;
         int count;
         Mat match_img;
-        tie(count, match_img) = ImagePair(currentImage, img).match(configWidget->settings);
+        tie(count, match_img) = ImagePair(configWidget->settings, currentImage, img).match();
 
         if (configWidget->settings.mirrorY) {
             int count_r;
             Mat match_img_r;
-            tie(count_r, match_img_r) = ImagePair(currentImage, img->mirrored).match(configWidget->settings);
+            tie(count_r, match_img_r) = ImagePair(configWidget->settings, currentImage, img->mirrored).match();
             if (max(count, count_r) > 0) {
                 names << QString(img->file_name.c_str()) + " (" + QString::number(max(count, count_r)) + ")";
                 if (count >= count_r){
