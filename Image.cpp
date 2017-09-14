@@ -12,18 +12,20 @@ Image::Image(const char *file_name) {
     DicomReader r;
     r.addFile(file_name);
     r.config();
-    mat= r.read(CV_8U)[0];
-    //Mat contr(mat.rows, mat.cols, mat.type());
-    //mat.convertTo(contr, -1, 3);
-    //mat = contr;
+    original = r.read(CV_8U)[0];
     resize();
 }
 
+void Image::applyContrast(const MatchSettings &settings) {
+    mat = Mat(original.rows, original.cols, mat.type());
+    original.convertTo(mat, -1, settings.contrast);
+}
+
 void Image::resize()  {
-    double m = sqrt(double(400000) / double(mat.rows * mat.cols));
-    cv::Mat dest(static_cast<int>(mat.rows * m), static_cast<int>(mat.cols * m), CV_8U);
-    cv::resize(mat, dest, dest.size());
-    mat = dest;
+    double m = sqrt(double(400000) / double(original.rows * original.cols));
+    cv::Mat dest(static_cast<int>(original.rows * m), static_cast<int>(original.cols * m), CV_8U);
+    cv::resize(original, dest, dest.size());
+    original = dest;
     //   cout <<  double(templ.mat.rows * templ.mat.cols) / double(mat.rows * mat.cols) << endl;
 }
 
@@ -36,20 +38,19 @@ void addKeyPoint(const KeyPoint &k, map<int, vector<KeyPoint>> &kpmap) {
 
 
 
-float getScale(int octave) {
+float getScale(int octave, const MatchSettings &settings) {
     switch (octave) {
-        case 0: return 4;
-        case 1: return 3;
-        case 2: return 3;
-        case 3: return 2;
-        case 4: return 2;
-        default: return 2;
+        case 0: return settings.scale0;
+        case 1: return settings.scale1;
+        case 2: return settings.scale2;
+        case 3: return settings.scale3;
+        default: return settings.scale3;
     }
 }
 
-void Image::scan() {
-
-    cv::SurfFeatureDetector detector{300, OCTAVES,1};
+void Image::scan(const MatchSettings &settings) {
+    applyContrast(settings);
+    cv::SurfFeatureDetector detector{settings.minHessian, OCTAVES,1};
 
     vector<KeyPoint> points;
     detector.detect( mat, points );
@@ -57,7 +58,7 @@ void Image::scan() {
     for(auto &k : points) {
         addKeyPoint(k, keypoints);
         KeyPoint scaled;
-        scaled.size = k.size * getScale(k.octave);
+        scaled.size = k.size * getScale(k.octave, settings);
         scaled.octave = k.octave;
         scaled.response = k.response;
         scaled.angle = k.angle;
@@ -131,7 +132,7 @@ MatchList getReverseFilteredMatchList(const Mat &descriptors1, const Mat &descri
     return matches.filter(matches_back);
 }
 
-tuple<int, Mat> Image::match(const Image &other) const {
+tuple<int, Mat> Image::match(const Image &other, const MatchSettings &settings) const {
 
     vector<KeyPoint> mkpoints1;
     vector<KeyPoint> mkpoints2;
@@ -155,7 +156,7 @@ tuple<int, Mat> Image::match(const Image &other) const {
         MatchList matches = getReverseFilteredMatchList(descriptors1, descriptors2);
         MatchList matches_scaled = getReverseFilteredMatchList(scaled_descriptors.at(octave), other.scaled_descriptors.at(octave));
 
-        for (int i = 0; i < matches.size(); ++i) {
+        for (size_t i = 0; i < matches.size(); ++i) {
             auto match = matches[i];
             if (matches_scaled.has(match.queryIdx, match.trainIdx)) {
                 mkpoints1.push_back(keypoints.at(octave)[match.queryIdx]);

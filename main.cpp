@@ -17,17 +17,17 @@ int main(int argc, char** argv)
     std::cout << "open cv " << CV_MAJOR_VERSION << '.' << CV_MINOR_VERSION << std::endl;
 
     QApplication app(argc, argv);
-    auto *window = new MainWindow;
 
-
-    window->show();
-
-    QString dirPath = QFileDialog::getExistingDirectory(window, QObject::tr("Open Directory"),
-                                                    "/home",
+    QString dirPath = QFileDialog::getExistingDirectory(nullptr, QObject::tr("Open Directory"),
+                                                    "/home/agabor/CLionProjects/cv_test/input",
                                                     QFileDialog::ShowDirsOnly
                                                     | QFileDialog::DontResolveSymlinks);
     QDir dir(dirPath);
 
+    auto *window = new MainWindow;
+
+
+    window->show();
     window->init(dir, dir.entryList());
 
     return app.exec();

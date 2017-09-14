@@ -13,6 +13,7 @@
 #include <QtWidgets/QPushButton>
 #include <tuple>
 #include "DicomReader.h"
+#include "ConfigWidget.h"
 
 using namespace cv;
 using namespace std;
@@ -48,6 +49,11 @@ void MainWindow::init(QDir base_dir, QStringList files) {
     button_dock->setWidget(button);
     addDockWidget(Qt::BottomDockWidgetArea, button_dock);
 
+
+    auto *configWidget = new ConfigWidget(this);
+    configWidget->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    addDockWidget(Qt::TopDockWidgetArea, configWidget);
+
     QStringList dicomFiles;
     for (auto& file : files) {
         const QString absoluteFilePath = base_dir.absoluteFilePath(file);
@@ -56,7 +62,7 @@ void MainWindow::init(QDir base_dir, QStringList files) {
             dicomFiles << file;
             auto *i = new Image(absoluteFilePath.toLatin1().data());
 
-            i->scan();
+            i->scan(configWidget->settings);
             images.push_back(i);
         }
     }
@@ -65,11 +71,11 @@ void MainWindow::init(QDir base_dir, QStringList files) {
     m->setStringList(dicomFiles);
     filesView->setModel(m);
     currentImage = images[0];
-    setImage(currentImage->mat);
+    setImage(currentImage->original);
 
     connect(filesView, &QListView::activated,[=]( const QModelIndex &index ) {
         currentImage = images[index.row()];
-        setImage(currentImage->mat);
+        setImage(currentImage->original);
     });
 
     connect(button, &QPushButton::pressed,[=]( ) {
@@ -80,7 +86,7 @@ void MainWindow::init(QDir base_dir, QStringList files) {
                 continue;
             int count;
             Mat mimg;
-            tie(count, mimg) = currentImage->match(*img);
+            tie(count, mimg) = currentImage->match(*img, configWidget->settings);
             if (count > 0) {
                 names << QString::number(count);
                 matches.push_back(mimg);
