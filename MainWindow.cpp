@@ -24,6 +24,7 @@ void MainWindow::setImage(Mat &image) {
     auto format = image.type() == CV_8U ? QImage::Format_Grayscale8 : QImage::Format_RGB888;
     const QImage &qImage = QImage(image.data, image.cols, image.rows, int(image.step), format);
     imageLabel->setPixmap(QPixmap::fromImage(qImage));
+    adjustSize();
 }
 
 void MainWindow::init(QList<QSharedPointer<Image>> images) {
@@ -43,7 +44,7 @@ void MainWindow::init(QList<QSharedPointer<Image>> images) {
 
 
     QStringList fileNames;
-    for (auto img : images) {
+    for (const auto &img : images) {
         fileNames << img->file_name.c_str();
     }
     auto m = new QStringListModel();

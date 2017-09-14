@@ -4,6 +4,7 @@
 #include <iostream>
 #include <qt5/QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>
+#include <QtWidgets/QProgressDialog>
 #include "MainWindow.h"
 
 
@@ -25,8 +26,17 @@ int main(int argc, char** argv)
     QDir dir(dirPath);
 
 
+    QStringList files = dir.entryList();
+    auto *dialog = new QProgressDialog;
+    dialog->setLabelText("Loading Files");
+    dialog->setCancelButton(nullptr);
+    dialog->setMaximum(files.size());
+    int idx = 0;
+    dialog->show();
     QList<QSharedPointer<Image>> images;
-    for (auto& file :  dir.entryList()) {
+    for (auto& file :  files) {
+        dialog->setValue(idx++);
+        app.processEvents();
         if (file.startsWith('.'))
             continue;
         const QString absoluteFilePath = dir.absoluteFilePath(file);
@@ -36,6 +46,9 @@ int main(int argc, char** argv)
             images.push_back(QSharedPointer<Image>(i));
         }
     }
+    dialog->setValue(files.size());
+    app.processEvents();
+    dialog->close();
 
     auto *window = new MainWindow;
 
