@@ -41,7 +41,7 @@ public:
     std::map<int,cv::Mat> descriptors;
     std::map<int,std::vector<cv::KeyPoint>> scaled_keypoints;
     std::map<int,cv::Mat> scaled_descriptors;
-
+    std::string file_name;
 
 };
 

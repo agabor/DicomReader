@@ -24,11 +24,24 @@ int main(int argc, char** argv)
                                                     | QFileDialog::DontResolveSymlinks);
     QDir dir(dirPath);
 
+
+    QList<QSharedPointer<Image>> images;
+    for (auto& file :  dir.entryList()) {
+        if (file.startsWith('.'))
+            continue;
+        const QString absoluteFilePath = dir.absoluteFilePath(file);
+        if (DicomReader::isDicomFile(absoluteFilePath.toLatin1().data())) {
+            auto *i = new Image(absoluteFilePath.toLatin1().data());
+            i->file_name = file.toLatin1().data();
+            images.push_back(QSharedPointer<Image>(i));
+        }
+    }
+
     auto *window = new MainWindow;
 
 
     window->show();
-    window->init(dir, dir.entryList());
+    window->init(images);
 
     return app.exec();
 }

@@ -16,7 +16,7 @@
 
 class MainWindow : public QMainWindow {
 public:
-    void init(QDir base_dir, QStringList files);
+    void init(QList<QSharedPointer<Image>> images);
     void setImage(cv::Mat &image);
 private slots:
     void runSURF();
@@ -25,8 +25,8 @@ private:
     QListView *filesView;
     QListView *filteredView;
     QVector<cv::Mat> matches;
-    QVector<Image*> images;
-    Image* currentImage;
+    QList<QSharedPointer<Image>> images;
+    QSharedPointer<Image> currentImage;
     ConfigWidget *configWidget;
 
     void initFilesWidget();

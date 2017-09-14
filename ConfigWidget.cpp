@@ -7,6 +7,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QCheckBox>
 
 #include "ConfigWidget.h"
 
@@ -38,6 +39,11 @@ ConfigWidget::ConfigWidget(QWidget *parent) : QDockWidget("config", parent) {
         settings.scale3 = static_cast<float>(val);
     });
 
+
+    auto *propertyLayout = new QVBoxLayout;
+    propertyLayout->addWidget(new QCheckBox("reverse matching"));
+    propertyLayout->addWidget(new QCheckBox("scaled matching"));
+    layout->addItem(propertyLayout);
     widget->setLayout(layout);
 
     setWidget(widget);

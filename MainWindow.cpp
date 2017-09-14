@@ -26,7 +26,8 @@ void MainWindow::setImage(Mat &image) {
     imageLabel->setPixmap(QPixmap::fromImage(qImage));
 }
 
-void MainWindow::init(QDir base_dir, QStringList files) {
+void MainWindow::init(QList<QSharedPointer<Image>> images) {
+    this->images = images;
     imageLabel = new QLabel;
     setCentralWidget(imageLabel);
 
@@ -40,20 +41,13 @@ void MainWindow::init(QDir base_dir, QStringList files) {
     configWidget->setFeatures(QDockWidget::NoDockWidgetFeatures);
     addDockWidget(Qt::TopDockWidgetArea, configWidget);
 
-    QStringList dicomFiles;
-    for (auto& file : files) {
-        const QString absoluteFilePath = base_dir.absoluteFilePath(file);
-        if (DicomReader::isDicomFile(absoluteFilePath.toLatin1().data())) {
 
-            dicomFiles << file;
-            auto *i = new Image(absoluteFilePath.toLatin1().data());
-
-            images.push_back(i);
-        }
+    QStringList fileNames;
+    for (auto img : images) {
+        fileNames << img->file_name.c_str();
     }
-
     auto m = new QStringListModel();
-    m->setStringList(dicomFiles);
+    m->setStringList(fileNames);
     filesView->setModel(m);
     currentImage = images[0];
     setImage(currentImage->original);
@@ -95,12 +89,12 @@ void MainWindow::runSURF() {
     matches.clear();
     if (configWidget->changed) {
             configWidget->changed = false;
-            for (auto *img : images) {
+            for (const auto &img : images) {
                 img->scan(configWidget->settings);
             }
     }
     QStringList names;
-    for (auto img : images) {
+    for (const auto &img : images) {
             if (img == currentImage)
                 continue;
             int count;
