@@ -1,11 +1,11 @@
 
 #include <opencv2/core/core.hpp>
-#include "DicomReader.h"
+#include "cv/DicomReader.h"
 #include <iostream>
 #include <qt5/QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QProgressDialog>
-#include "MainWindow.h"
+#include "ui/MainWindow.h"
 
 
 using namespace cv;
@@ -15,7 +15,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
 
-    std::cout << "open cv " << CV_MAJOR_VERSION << '.' << CV_MINOR_VERSION << std::endl;
+    std::cout << "OpenCV " << CV_MAJOR_VERSION << '.' << CV_MINOR_VERSION << std::endl;
 
     QApplication app(argc, argv);
 

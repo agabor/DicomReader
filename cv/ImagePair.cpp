@@ -129,11 +129,11 @@ Mat ImagePair::keyPointImageA() const {
     return imk1;
 }
 
-const char *ImagePair::label() {
+string ImagePair::label() {
     stringstream ss;
     ss << image_b->file_name;
     ss << " (";
     ss << matchCount();
     ss << ")";
-    return ss.str().c_str();
+    return ss.str();
 }

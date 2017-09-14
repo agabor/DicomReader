@@ -14,9 +14,9 @@
 #include <tuple>
 #include <QtWidgets/QProgressDialog>
 #include <QtCore/QCoreApplication>
-#include "DicomReader.h"
+#include "../cv/DicomReader.h"
 #include "ConfigWidget.h"
-#include "ImagePair.h"
+#include "../cv/ImagePair.h"
 
 using namespace cv;
 using namespace std;
@@ -119,7 +119,7 @@ void MainWindow::runFeatureMatching() {
         ImagePair imagePair = getImagePair(img);
 
         if (imagePair.matchCount() > 0) {
-            names << imagePair.label();
+            names << imagePair.label().c_str();
             matches.push_back(imagePair);
         }
         dialog->setValue(++idx);

@@ -14,9 +14,9 @@
 
 #include <opencv2/core/core.hpp>
 
-#include "Image.h"
+#include "../cv/Image.h"
 #include "ConfigWidget.h"
-#include "ImagePair.h"
+#include "../cv/ImagePair.h"
 
 class MainWindow : public QMainWindow {
 public:

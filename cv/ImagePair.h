@@ -23,7 +23,7 @@ public:
 
     cv::Mat matchImage() const;
 
-    const char *label();
+    std::string label();
 
     std::shared_ptr<Image> image_a;
     std::shared_ptr<Image> image_b;

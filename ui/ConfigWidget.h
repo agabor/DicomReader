@@ -11,7 +11,7 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QLayout>
 
-#include "Image.h"
+#include "../cv/Image.h"
 
 class ConfigWidget : public QDockWidget {
 public:
