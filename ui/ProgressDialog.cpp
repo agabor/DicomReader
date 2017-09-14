@@ -12,6 +12,7 @@ int idx;
 
 void ProgressDialog::start(QString title, int items) {
     dialog = new QProgressDialog;
+    dialog->setWindowTitle(title);
     dialog->setLabelText(title);
     dialog->setCancelButton(nullptr);
     dialog->setMaximum(items);

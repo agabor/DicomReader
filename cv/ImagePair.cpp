@@ -133,8 +133,34 @@ Mat ImagePair::keyPointImageA() const {
 string ImagePair::label() const {
     stringstream ss;
     ss << image_b->file_name;
-    ss << " (";
+    ss << " (M: ";
     ss << matchCount();
+    ss << ",H: ";
+    ss << homography();
     ss << ")";
     return ss.str();
 }
+
+int ImagePair::homography() const {
+
+    if (matchedKeyPoints1.size() < 4)
+        return 0;
+
+    std::vector<Point2f> points1;
+    std::vector<Point2f> points2;
+
+    for (int i = 0; i < matchedKeyPoints1.size(); i++) {
+        points1.push_back(matchedKeyPoints1[i].pt);
+        points2.push_back(matchedKeyPoints2[i].pt);
+    }
+
+    Mat H = findHomography(points1, points2, CV_RANSAC);
+
+    int count = 0;
+    for (int i = 0; i < matchedKeyPoints1.size(); i++) {
+        if (H.data[i])
+            ++count;
+    }
+    return count;
+}
+

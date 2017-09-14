@@ -49,6 +49,8 @@ private:
     cv::Mat keyPointImageA() const;
 
     cv::Mat keyPointImageB() const;
+
+    int homography() const;
 };
 
 
