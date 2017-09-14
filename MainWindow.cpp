@@ -75,7 +75,10 @@ void MainWindow::initCategoryWidget() {
     addDockWidget(RightDockWidgetArea, right_dock);
     filesView->setFixedWidth(200);
     connect(filteredView, &QListView::activated,[=]( const QModelIndex &index ) {
-        setImage(matches[index.row()]);
+        setImage(matches[index.row()].image_b->original);
+    });
+    connect(filteredView, &QListView::doubleClicked,[=]( const QModelIndex &index ) {
+        cv::imshow("Matched Features", matches[index.row()].matchImage());
     });
 }
 
@@ -112,27 +115,12 @@ void MainWindow::runFeatureMatching() {
     for (const auto &img : images) {
         if (img == currentImage)
             continue;
-        int count;
-        Mat match_img;
-        tie(count, match_img) = ImagePair(configWidget->settings, currentImage, img).match();
 
-        if (configWidget->settings.mirrorY) {
-            int count_r;
-            Mat match_img_r;
-            tie(count_r, match_img_r) = ImagePair(configWidget->settings, currentImage, img->mirrored).match();
-            if (max(count, count_r) > 0) {
-                names << QString(img->file_name.c_str()) + " (" + QString::number(max(count, count_r)) + ")";
-                if (count >= count_r){
-                    matches.push_back(match_img);
-                } else {
-                    matches.push_back(match_img_r);
-                }
-            }
-        } else {
-            if (count > 0) {
-                names << QString(img->file_name.c_str()) + " (" + QString::number(count) + ")";
-                matches.push_back(match_img);
-            }
+        ImagePair imagePair = getImagePair(img);
+
+        if (imagePair.matchCount() > 0) {
+            names << imagePair.label();
+            matches.push_back(imagePair);
         }
         dialog->setValue(++idx);
         qApp->processEvents();
@@ -142,6 +130,17 @@ void MainWindow::runFeatureMatching() {
     model->setStringList(names);
     filteredView->setModel(model);
     dialog->close();
+}
+
+ImagePair MainWindow::getImagePair(const shared_ptr<Image> &img) const {
+    ImagePair imagePair(configWidget->settings, currentImage, img);
+
+    if (configWidget->settings.mirrorY) {
+        ImagePair mirroredPair(configWidget->settings, currentImage, img->mirrored);
+        if (mirroredPair.matchCount() > imagePair.matchCount())
+            return mirroredPair;
+    }
+    return imagePair;
 }
 
 void MainWindow::runFeatureDetectionAndDescription() {

@@ -17,12 +17,21 @@
 
 class ImagePair {
 public:
-ImagePair(const MatchSettings &settings, std::shared_ptr<Image> a, std::shared_ptr<Image> b);
-    std::tuple<int, cv::Mat> match();
-private:
-    const MatchSettings &settings;
+    ImagePair(const MatchSettings &settings, std::shared_ptr<Image> a, std::shared_ptr<Image> b);
+
+    size_t matchCount() const;
+
+    cv::Mat matchImage() const;
+
+    const char *label();
+
     std::shared_ptr<Image> image_a;
     std::shared_ptr<Image> image_b;
+
+private:
+    void match();
+
+    const MatchSettings &settings;
     std::vector<cv::KeyPoint> matchedKeyPoints1;
     std::vector<cv::KeyPoint> matchedKeyPoints2;
     std::vector<cv::KeyPoint> matchedScaledKeyPoints1;
@@ -36,6 +45,10 @@ private:
     MatchList getScaledMatchList(int octave) const;
 
     void acceptMatch(int octave, const cv::DMatch &match);
+
+    cv::Mat keyPointImageA() const;
+
+    cv::Mat keyPointImageB() const;
 };
 
 

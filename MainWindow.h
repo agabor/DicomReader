@@ -16,6 +16,7 @@
 
 #include "Image.h"
 #include "ConfigWidget.h"
+#include "ImagePair.h"
 
 class MainWindow : public QMainWindow {
 public:
@@ -29,7 +30,7 @@ private:
     QListView *filteredView;
     ConfigWidget *configWidget;
 
-    std::vector<cv::Mat> matches;
+    std::vector<ImagePair> matches;
     std::vector<std::shared_ptr<Image>> images;
     std::shared_ptr<Image> currentImage;
 
@@ -42,6 +43,8 @@ private:
     void runFeatureDetectionAndDescription();
 
     void runFeatureMatching();
+
+    ImagePair getImagePair(const std::shared_ptr<Image> &img) const;
 };
 
 

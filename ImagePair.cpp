@@ -16,6 +16,7 @@ using namespace std;
 ImagePair::ImagePair(const MatchSettings &settings, std::shared_ptr<Image> a, std::shared_ptr<Image> b) : settings(settings) {
     image_a = std::move(a);
     image_b = std::move(b);
+    match();
 }
 
 
@@ -39,27 +40,10 @@ Mat drawKeypoints(const vector<KeyPoint> &keypoints, Mat &image)  {
 }
 
 
-tuple<int, Mat> ImagePair::match() {
-
+void ImagePair::match() {
     for (int octave = OCTAVES; octave >= 0; --octave) {
         matchOctave(octave);
     }
-
-
-    Mat imk1 = drawKeypoints(matchedKeyPoints1, image_a->mat);
-    Mat imk2 = drawKeypoints(matchedKeyPoints2, image_b->mat);
-
-    if (settings.scale) {
-        imk1 = drawKeypoints(matchedScaledKeyPoints1, imk1);
-        imk2 = drawKeypoints(matchedScaledKeyPoints2, imk2);
-    }
-
-    Mat img_matches;
-    cv::drawMatches(imk1, matchedKeyPoints1, imk2, matchedKeyPoints2,
-                    aggr_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-                    vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-
-    return tuple<int, Mat>(aggr_matches.size(), img_matches);
 }
 
 void ImagePair::matchOctave(int octave) {
@@ -102,14 +86,54 @@ MatchList ImagePair::getMatchList(int octave) const {
     if (it1 == image_a->descriptors.end())
         return MatchList();
 
-    auto descriptors1 = it1->second;
-
-
     auto it2 = image_b->descriptors.find(octave);
     if (it2 == image_b->descriptors.end())
         return MatchList();
 
-    auto descriptors2 = it2->second;
+    return ::getMatchList(it1->second, it2->second, settings);
+}
 
-    return ::getMatchList(descriptors1, descriptors2, settings);
+size_t ImagePair::matchCount() const {
+    return aggr_matches.size();
+}
+
+cv::Mat ImagePair::matchImage() const {
+    Mat imk1 = keyPointImageA();
+
+    Mat imk2 = keyPointImageB();
+
+    Mat img_matches;
+    cv::drawMatches(imk1, matchedKeyPoints1, imk2, matchedKeyPoints2,
+                    aggr_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                    vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+    return img_matches;
+}
+
+Mat ImagePair::keyPointImageB() const {
+    Mat imk2 = drawKeypoints(matchedKeyPoints2, image_b->mat);
+
+    if (settings.scale) {
+        imk2 = drawKeypoints(matchedScaledKeyPoints2, imk2);
+    }
+
+    return imk2;
+}
+
+Mat ImagePair::keyPointImageA() const {
+    Mat imk1 = drawKeypoints(matchedKeyPoints1, image_a->mat);
+
+    if (settings.scale) {
+        imk1 = drawKeypoints(matchedScaledKeyPoints1, imk1);
+    }
+
+    return imk1;
+}
+
+const char *ImagePair::label() {
+    stringstream ss;
+    ss << image_b->file_name;
+    ss << " (";
+    ss << matchCount();
+    ss << ")";
+    return ss.str().c_str();
 }
