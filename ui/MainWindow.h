@@ -15,28 +15,21 @@
 #include <opencv2/core/core.hpp>
 
 #include "../cv/Image.h"
-#include "ConfigWidget.h"
 #include "../cv/ImagePair.h"
+
+#include "ConfigWidget.h"
 
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(std::vector<std::shared_ptr<Image>> images);
-    void setImage(cv::Mat &image);
 private slots:
     void runSURF();
 private:
-    QLabel *imageLabel;
-    QListView *filesView;
-    QListView *filteredView;
-    ConfigWidget *configWidget;
-
-    std::vector<ImagePair> matches;
-    std::vector<std::shared_ptr<Image>> images;
-    std::shared_ptr<Image> currentImage;
+    void setImage(cv::Mat &image);
 
     void initFilesWidget();
 
-    void initCategoryWidget();
+    void initMatchesWidget();
 
     void initFilterButton();
 
@@ -47,6 +40,21 @@ private:
     ImagePair getImagePair(const std::shared_ptr<Image> &img) const;
 
     void setMatchLabels() const;
+
+    void sortMatches();
+
+    void setFiles(const std::vector<std::shared_ptr<Image>> &images);
+
+    void initConfigWidget();
+
+    QLabel *imageLabel;
+    QListView *filesView;
+    QListView *filteredView;
+    ConfigWidget *configWidget;
+
+    std::vector<ImagePair> matches;
+    std::vector<std::shared_ptr<Image>> images;
+    std::shared_ptr<Image> currentImage;
 };
 
 

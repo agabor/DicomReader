@@ -5,7 +5,6 @@
 #ifndef CV_TEST_PROGRESS_H
 #define CV_TEST_PROGRESS_H
 
-
 #include <QtCore/QString>
 
 class ProgressDialog {

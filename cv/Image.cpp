@@ -1,7 +1,6 @@
 #include "Image.h"
 #include "DicomReader.h"
 #include <iostream>
-#include <vector>
 
 using namespace cv;
 using namespace std;
@@ -10,9 +9,7 @@ using namespace std;
 
 Image::Image(const char *file_name) {
     DicomReader r;
-    r.addFile(file_name);
-    r.config();
-    original = r.read(CV_8U)[0];
+    original = r.read(file_name, CV_8U);
     resize();
 }
 
@@ -26,7 +23,6 @@ void Image::resize()  {
     cv::Mat dest(static_cast<int>(original.rows * m), static_cast<int>(original.cols * m), CV_8U);
     cv::resize(original, dest, dest.size());
     original = dest;
-    //   cout <<  double(templ.mat.rows * templ.mat.cols) / double(mat.rows * mat.cols) << endl;
 }
 
 
@@ -96,7 +92,7 @@ void Image::detectKeyPoints(const MatchSettings &settings)  {
     detector.detect(mat, points );
 
     sort(points.begin(), points.end(),
-         [](const KeyPoint & a, const KeyPoint & b) -> bool
+         [](const KeyPoint &a, const KeyPoint &b) -> bool
          {
              return a.response > b.response;
          });

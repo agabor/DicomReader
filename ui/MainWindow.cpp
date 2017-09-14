@@ -8,7 +8,9 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QProgressDialog>
 #include <QtCore/QCoreApplication>
+
 #include "../cv/DicomReader.h"
+
 #include "ProgressDialog.h"
 
 using namespace cv;
@@ -25,20 +27,28 @@ void MainWindow::setImage(Mat &image) {
 
 MainWindow::MainWindow(std::vector<std::shared_ptr<Image>> images) {
     this->images = images;
+
     imageLabel = new QLabel;
     setCentralWidget(imageLabel);
 
     initFilesWidget();
 
-    initCategoryWidget();
+    initMatchesWidget();
 
     initFilterButton();
 
+    initConfigWidget();
+
+    setFiles(images);
+}
+
+void MainWindow::initConfigWidget() {
     configWidget = new ConfigWidget(this);
     configWidget->setFeatures(QDockWidget::NoDockWidgetFeatures);
-    addDockWidget(Qt::TopDockWidgetArea, configWidget);
+    addDockWidget(TopDockWidgetArea, configWidget);
+}
 
-
+void MainWindow::setFiles(const vector<shared_ptr<Image>> &images) {
     QStringList fileNames;
     for (const auto &img : images) {
         fileNames << img->file_name.c_str();
@@ -60,8 +70,8 @@ void MainWindow::initFilterButton() {
     connect(button, &QPushButton::pressed, this, &MainWindow::runSURF);
 }
 
-void MainWindow::initCategoryWidget() {
-    QDockWidget *right_dock = new QDockWidget(QObject::tr("Files"), this);
+void MainWindow::initMatchesWidget() {
+    QDockWidget *right_dock = new QDockWidget(QObject::tr("Matches"), this);
     right_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
     filteredView = new QListView(right_dock);
     right_dock->setWidget(filteredView);
@@ -98,6 +108,7 @@ void MainWindow::runSURF() {
 
 void MainWindow::runFeatureMatching() {
     ProgressDialog::start("Feature Matching", static_cast<int>(images.size() - 1));
+
     for (const auto &img : images) {
         if (img == currentImage)
             continue;
@@ -109,15 +120,20 @@ void MainWindow::runFeatureMatching() {
         }
         ProgressDialog::step();
     }
+
     ProgressDialog::end();
+
+    sortMatches();
+
+    setMatchLabels();
+}
+
+void MainWindow::sortMatches() {
     sort(matches.begin(), matches.end(),
          [](const ImagePair & a, const ImagePair & b) -> bool
          {
              return a.matchCount() > b.matchCount();
          });
-
-
-    setMatchLabels();
 }
 
 void MainWindow::setMatchLabels() const {

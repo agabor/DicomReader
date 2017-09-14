@@ -1,9 +1,12 @@
+#include <iostream>
+
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QFileDialog>
 
 #include <opencv2/core/core.hpp>
+
 #include "cv/DicomReader.h"
-#include <iostream>
-#include <qt5/QtWidgets/QApplication>
-#include <QtWidgets/QFileDialog>
+
 #include "ui/MainWindow.h"
 #include "ui/ProgressDialog.h"
 
@@ -21,7 +24,7 @@ int main(int argc, char** argv)
     QApplication app(argc, argv);
 
     QString dirPath = QFileDialog::getExistingDirectory(nullptr, QObject::tr("Open Directory"),
-                                                    "/home/agabor/CLionProjects/cv_test/input",
+                                                    "/home",
                                                     QFileDialog::ShowDirsOnly
                                                     | QFileDialog::DontResolveSymlinks);
     if (dirPath.isEmpty())

@@ -4,6 +4,7 @@
 
 #include <QtWidgets/QProgressDialog>
 #include <QtCore/QCoreApplication>
+
 #include "ProgressDialog.h"
 
 QProgressDialog *dialog;

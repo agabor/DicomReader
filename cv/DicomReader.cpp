@@ -7,9 +7,6 @@
 #include "dcmtk/dcmimgle/dcmimage.h"
 #include <opencv2/core/core.hpp>
 
-void DicomReader::addFile(const char *file_name) {
-    images.push_back(new DicomImage(file_name));
-}
 
 template <typename T>
 std::tuple<T,T> getRange(const T* data, size_t size) {
@@ -51,26 +48,24 @@ OT* DicomReader::normalizeToFloat(const IT* data) const {
     return normd;
 }
 
-void DicomReader::config() {
-    for (auto img : images) {
-        readImageProperties(img);
-        configureNormalization(img);
-    }
+void DicomReader::config(DicomImage &img) {
+    readImageProperties(img);
+    configureNormalization(img);
     calculateValuableBits();
 }
 
-void DicomReader::readImageProperties(const DicomImage *img) {
-    auto w = int(img->getWidth());
-    auto h = int(img->getHeight());
+void DicomReader::readImageProperties(const DicomImage &img) {
+    auto w = int(img.getWidth());
+    auto h = int(img.getHeight());
     if (input_bits == 0) {
-        depth = img->getDepth();
+        depth = img.getDepth();
         width = w;
         height = h;
         input_bits = 1;
         while (input_bits < depth)
             input_bits *= 2;
     } else {
-        if (depth != img->getDepth())
+        if (depth != img.getDepth())
             throw std::exception();
         if (width != w)
             throw std::exception();
@@ -87,7 +82,7 @@ void DicomReader::calculateValuableBits() {
     }
 }
 
-void DicomReader::configureNormalization(DicomImage *img) {
+void DicomReader::configureNormalization(DicomImage &img) {
     switch (input_bits) {
             case 8:
                 configureNormalization<uint8_t>(img);
@@ -107,7 +102,7 @@ void DicomReader::configureNormalization(DicomImage *img) {
 }
 
 template<typename T>
-void DicomReader::configureNormalization(DicomImage *img) {
+void DicomReader::configureNormalization(DicomImage &img) {
     T min, max;
     size_t size = (size_t)width * (size_t)height;
     auto *data = getOutputData<T>(img);
@@ -122,34 +117,31 @@ void DicomReader::configureNormalization(DicomImage *img) {
         throw std::exception();
 }
 
-std::vector<cv::Mat> DicomReader::read(int cv_type) {
+cv::Mat DicomReader::read(const char* file_name, int cv_type) {
     auto result = std::vector<cv::Mat>();
 
     if (cv_type == -1)
         cv_type = guessCVType();
-
-    for (auto &img : images) {
-        cv::Mat m;
-        switch (input_bits) {
-            case 8:
-                m = createMat<uint8_t>(img, cv_type);
-                break;
-            case 16:
-                m = createMat<uint16_t>(img, cv_type);
-                break;
-            case 32:
-                m = createMat<uint32_t>(img, cv_type);
-                break;
-            case 64:
-                m = createMat<uint64_t>(img, cv_type);
-                break;
-            default:
-                throw std::exception();
-        }
-        result.push_back(m);
+    DicomImage img(file_name);
+    config(img);
+    cv::Mat m;
+    switch (input_bits) {
+        case 8:
+            m = createMat<uint8_t>(img, cv_type);
+            break;
+        case 16:
+            m = createMat<uint16_t>(img, cv_type);
+            break;
+        case 32:
+            m = createMat<uint32_t>(img, cv_type);
+            break;
+        case 64:
+            m = createMat<uint64_t>(img, cv_type);
+            break;
+        default:
+            throw std::exception();
     }
-    return result;
-
+    return m;
 }
 
 int DicomReader::guessCVType() const {
@@ -166,7 +158,7 @@ int DicomReader::guessCVType() const {
 }
 
 template<typename T>
-cv::Mat DicomReader::createMat(DicomImage *img, int cv_type) const {
+cv::Mat DicomReader::createMat(DicomImage &img, int cv_type) const {
     void *data;
 
     auto *img_data = getOutputData<T>(img);
@@ -191,9 +183,9 @@ cv::Mat DicomReader::createMat(DicomImage *img, int cv_type) const {
 }
 
 template<typename T>
-const T *DicomReader::getOutputData(DicomImage *img) const
+const T *DicomReader::getOutputData(DicomImage &img) const
 {
-    return static_cast<const T*>(img->getOutputData(sizeof(T) * 8));
+    return static_cast<const T*>(img.getOutputData(sizeof(T) * 8));
 }
 
 bool DicomReader::isDicomFile(const char *file_name) {

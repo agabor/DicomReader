@@ -24,7 +24,7 @@ struct MatchSettings {
     float scale1 = 3.0f;
     float scale2 = 3.0f;
     float scale3 = 2.0f;
-    double contrast = 3.0f;
+    double contrast = 1.0f;
     double minHessian = 300.0f;
     bool mirrorY = false;
     bool reverse = true;
