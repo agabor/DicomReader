@@ -30,27 +30,13 @@ void MainWindow::init(QDir base_dir, QStringList files) {
     imageLabel = new QLabel;
     setCentralWidget(imageLabel);
 
-    QDockWidget *left_dock = new QDockWidget(QObject::tr("Files"), this);
-    left_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-    filesView = new QListView(left_dock);
-    left_dock->setWidget(filesView);
-    addDockWidget(Qt::LeftDockWidgetArea, left_dock);
+    initFilesWidget();
 
-    QDockWidget *right_dock = new QDockWidget(QObject::tr("Files"), this);
-    right_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-    filteredView = new QListView(right_dock);
-    right_dock->setWidget(filteredView);
-    addDockWidget(Qt::RightDockWidgetArea, right_dock);
+    initCategoryWidget();
 
+    initFilterButton();
 
-    QDockWidget *button_dock = new QDockWidget(this);
-    button_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-    QPushButton *button = new QPushButton(QObject::tr("Filter"), button_dock);
-    button_dock->setWidget(button);
-    addDockWidget(Qt::BottomDockWidgetArea, button_dock);
-
-
-    auto *configWidget = new ConfigWidget(this);
+    configWidget = new ConfigWidget(this);
     configWidget->setFeatures(QDockWidget::NoDockWidgetFeatures);
     addDockWidget(Qt::TopDockWidgetArea, configWidget);
 
@@ -62,7 +48,6 @@ void MainWindow::init(QDir base_dir, QStringList files) {
             dicomFiles << file;
             auto *i = new Image(absoluteFilePath.toLatin1().data());
 
-            i->scan(configWidget->settings);
             images.push_back(i);
         }
     }
@@ -72,16 +57,50 @@ void MainWindow::init(QDir base_dir, QStringList files) {
     filesView->setModel(m);
     currentImage = images[0];
     setImage(currentImage->original);
+}
 
+void MainWindow::initFilterButton() {
+    QDockWidget *button_dock = new QDockWidget(this);
+    button_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    QPushButton *button = new QPushButton(QObject::tr("Filter"), button_dock);
+    button_dock->setWidget(button);
+    addDockWidget(BottomDockWidgetArea, button_dock);
+    connect(button, &QPushButton::pressed, this, &MainWindow::runSURF);
+}
+
+void MainWindow::initCategoryWidget() {
+    QDockWidget *right_dock = new QDockWidget(QObject::tr("Files"), this);
+    right_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    filteredView = new QListView(right_dock);
+    right_dock->setWidget(filteredView);
+    addDockWidget(RightDockWidgetArea, right_dock);
+    connect(filteredView, &QListView::activated,[=]( const QModelIndex &index ) {
+        setImage(matches[index.row()]);
+    });
+}
+
+void MainWindow::initFilesWidget() {
+    QDockWidget *left_dock = new QDockWidget(QObject::tr("Files"), this);
+    left_dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    filesView = new QListView(left_dock);
+    left_dock->setWidget(filesView);
+    addDockWidget(LeftDockWidgetArea, left_dock);
     connect(filesView, &QListView::activated,[=]( const QModelIndex &index ) {
         currentImage = images[index.row()];
         setImage(currentImage->original);
     });
+}
 
-    connect(button, &QPushButton::pressed,[=]( ) {
-        matches.clear();
-        QStringList names;
-        for (auto img : images) {
+void MainWindow::runSURF() {
+    matches.clear();
+    if (configWidget->changed) {
+            configWidget->changed = false;
+            for (auto *img : images) {
+                img->scan(configWidget->settings);
+            }
+    }
+    QStringList names;
+    for (auto img : images) {
             if (img == currentImage)
                 continue;
             int count;
@@ -93,14 +112,8 @@ void MainWindow::init(QDir base_dir, QStringList files) {
             }
         }
 
-        auto model = new QStringListModel();
-        model->setStringList(names);
-        filteredView->setModel(model);
-    });
-
-
-    connect(filteredView, &QListView::activated,[=]( const QModelIndex &index ) {
-        setImage(matches[index.row()]);
-    });
+    auto model = new QStringListModel();
+    model->setStringList(names);
+    filteredView->setModel(model);
 }
 

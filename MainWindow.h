@@ -7,16 +7,19 @@
 
 
 #include <opencv2/core/core.hpp>
-#include <qt5/QtWidgets/QMainWindow>
+#include <QtWidgets/QMainWindow>
 #include <QLabel>
 #include <QtWidgets/QListView>
 #include <QtCore/QDir>
 #include "Image.h"
+#include "ConfigWidget.h"
 
 class MainWindow : public QMainWindow {
 public:
     void init(QDir base_dir, QStringList files);
     void setImage(cv::Mat &image);
+private slots:
+    void runSURF();
 private:
     QLabel *imageLabel;
     QListView *filesView;
@@ -24,6 +27,13 @@ private:
     QVector<cv::Mat> matches;
     QVector<Image*> images;
     Image* currentImage;
+    ConfigWidget *configWidget;
+
+    void initFilesWidget();
+
+    void initCategoryWidget();
+
+    void initFilterButton();
 };
 
 
