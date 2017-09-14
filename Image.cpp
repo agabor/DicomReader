@@ -58,12 +58,7 @@ void Image::scan(const MatchSettings &settings) {
     for(auto &k : points) {
         addKeyPoint(k, keypoints);
         KeyPoint scaled;
-        scaled.size = k.size * getScale(k.octave, settings);
-        scaled.octave = k.octave;
-        scaled.response = k.response;
-        scaled.angle = k.angle;
-        scaled.class_id = k.class_id;
-        scaled.pt = k.pt;
+        scaled = getScaledKeyPoint(settings, k, scaled);
         addKeyPoint(scaled, scaled_keypoints);
     }
 
@@ -79,6 +74,16 @@ void Image::scan(const MatchSettings &settings) {
         extractor.compute(mat, item.second, desc);
         scaled_descriptors[item.first] = desc;
     }
+}
+
+KeyPoint &Image::getScaledKeyPoint(const MatchSettings &settings, const KeyPoint &k, KeyPoint &scaled) const {
+    scaled.size = k.size * getScale(k.octave, settings);
+    scaled.octave = k.octave;
+    scaled.response = k.response;
+    scaled.angle = k.angle;
+    scaled.class_id = k.class_id;
+    scaled.pt = k.pt;
+    return scaled;
 }
 
 class MatchList : public vector<DMatch> {

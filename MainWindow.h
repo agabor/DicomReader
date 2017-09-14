@@ -34,6 +34,10 @@ private:
     void initCategoryWidget();
 
     void initFilterButton();
+
+    void runFeatureDetectionAndDescription();
+
+    void runFeatureMatching();
 };
 
 

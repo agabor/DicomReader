@@ -12,6 +12,8 @@
 #include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
 #include <tuple>
+#include <QtWidgets/QProgressDialog>
+#include <QtCore/QCoreApplication>
 #include "DicomReader.h"
 #include "ConfigWidget.h"
 
@@ -89,26 +91,56 @@ void MainWindow::initFilesWidget() {
 void MainWindow::runSURF() {
     matches.clear();
     if (configWidget->changed) {
-            configWidget->changed = false;
-            for (const auto &img : images) {
-                img->scan(configWidget->settings);
-            }
+        runFeatureDetectionAndDescription();
     }
+    runFeatureMatching();
+
+}
+
+void MainWindow::runFeatureMatching() {
     QStringList names;
+    auto *dialog = new QProgressDialog(this);
+    dialog->setLabelText("Feature Matching");
+    dialog->setCancelButton(nullptr);
+    dialog->setMaximum(images.size() - 1);
+    int idx = 0;
+    dialog->show();
+    qApp->processEvents();
     for (const auto &img : images) {
-            if (img == currentImage)
-                continue;
-            int count;
-            Mat mimg;
-            tie(count, mimg) = currentImage->match(*img, configWidget->settings);
-            if (count > 0) {
-                names << QString::number(count);
-                matches.push_back(mimg);
-            }
+        if (img == currentImage)
+            continue;
+        int count;
+        Mat mimg;
+        tie(count, mimg) = currentImage->match(*img, configWidget->settings);
+        if (count > 0) {
+            names << QString(img->file_name.c_str()) + " (" + QString::number(count) + ")";
+            matches.push_back(mimg);
         }
+        dialog->setValue(++idx);
+        qApp->processEvents();
+    }
 
     auto model = new QStringListModel();
     model->setStringList(names);
     filteredView->setModel(model);
+    dialog->close();
+}
+
+void MainWindow::runFeatureDetectionAndDescription() {
+    configWidget->changed = false;
+    auto *dialog = new QProgressDialog(this);
+    dialog->setLabelText("Feature Detection & Description");
+    dialog->setCancelButton(nullptr);
+    dialog->setMaximum(images.size());
+    int idx = 0;
+    dialog->show();
+    qApp->processEvents();
+
+    for (const auto &img : images) {
+        img->scan(configWidget->settings);
+        dialog->setValue(++idx);
+        qApp->processEvents();
+    }
+    dialog->close();
 }
 

@@ -15,7 +15,7 @@
 #include <map>
 #include <tuple>
 
-#define OCTAVES 4
+#define OCTAVES 8
 
 struct MatchSettings {
     float scale0 = 4.0f;
@@ -43,6 +43,7 @@ public:
     std::map<int,cv::Mat> scaled_descriptors;
     std::string file_name;
 
+    cv::KeyPoint &getScaledKeyPoint(const MatchSettings &settings, const cv::KeyPoint &k, cv::KeyPoint &scaled) const;
 };
 
 
