@@ -5,18 +5,21 @@
 #ifndef CV_TEST_MAINWINDOW_H
 #define CV_TEST_MAINWINDOW_H
 
+#include <memory>
 
-#include <opencv2/core/core.hpp>
 #include <QtWidgets/QMainWindow>
 #include <QLabel>
 #include <QtWidgets/QListView>
 #include <QtCore/QDir>
+
+#include <opencv2/core/core.hpp>
+
 #include "Image.h"
 #include "ConfigWidget.h"
 
 class MainWindow : public QMainWindow {
 public:
-    void init(QList<QSharedPointer<Image>> images);
+    MainWindow(std::vector<std::shared_ptr<Image>> images);
     void setImage(cv::Mat &image);
 private slots:
     void runSURF();
@@ -24,10 +27,11 @@ private:
     QLabel *imageLabel;
     QListView *filesView;
     QListView *filteredView;
-    QVector<cv::Mat> matches;
-    QList<QSharedPointer<Image>> images;
-    QSharedPointer<Image> currentImage;
     ConfigWidget *configWidget;
+
+    std::vector<cv::Mat> matches;
+    std::vector<std::shared_ptr<Image>> images;
+    std::shared_ptr<Image> currentImage;
 
     void initFilesWidget();
 

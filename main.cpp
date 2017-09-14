@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     dialog->setMaximum(files.size());
     int idx = 0;
     dialog->show();
-    QList<QSharedPointer<Image>> images;
+    std::vector<std::shared_ptr<Image>> images;
     for (auto& file :  files) {
         dialog->setValue(idx++);
         app.processEvents();
@@ -43,18 +43,17 @@ int main(int argc, char** argv)
         if (DicomReader::isDicomFile(absoluteFilePath.toLatin1().data())) {
             auto *i = new Image(absoluteFilePath.toLatin1().data());
             i->file_name = file.toLatin1().data();
-            images.push_back(QSharedPointer<Image>(i));
+            images.push_back(std::shared_ptr<Image>(i));
         }
     }
     dialog->setValue(files.size());
     app.processEvents();
     dialog->close();
 
-    auto *window = new MainWindow;
+    auto *window = new MainWindow(images);
 
 
     window->show();
-    window->init(images);
 
     return app.exec();
 }

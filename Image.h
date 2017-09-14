@@ -5,15 +5,17 @@
 #ifndef CV_TEST_IMAGE_H
 #define CV_TEST_IMAGE_H
 
+#include <vector>
+#include <map>
+#include <tuple>
+#include <memory>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include "opencv2/nonfree/nonfree.hpp"
+#include <opencv2/nonfree/nonfree.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
-#include <vector>
-#include <map>
-#include <tuple>
 
 #define OCTAVES 8
 
@@ -36,7 +38,6 @@ public:
     void resize();
     void scan(const MatchSettings &settings);
     void applyContrast(const MatchSettings &settings);
-    std::tuple<int, cv::Mat> match(const Image &other, const MatchSettings &settings) const;
 
 
     cv::Mat original;
@@ -47,10 +48,16 @@ public:
     std::map<int,cv::Mat> scaled_descriptors;
     std::string file_name;
 
-    cv::KeyPoint &getScaledKeyPoint(const MatchSettings &settings, const cv::KeyPoint &k, cv::KeyPoint &scaled) const;
-    Image *mirrored = nullptr;
+    std::shared_ptr<Image> mirrored = nullptr;
 private:
     void scanSelf(const MatchSettings &settings);
+
+    void extractDescriptors();
+
+    void detectKeyPoints(const MatchSettings &settings);
+
+    void clear();
+
 };
 
 

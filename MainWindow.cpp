@@ -16,6 +16,7 @@
 #include <QtCore/QCoreApplication>
 #include "DicomReader.h"
 #include "ConfigWidget.h"
+#include "ImagePair.h"
 
 using namespace cv;
 using namespace std;
@@ -29,7 +30,7 @@ void MainWindow::setImage(Mat &image) {
     adjustSize();
 }
 
-void MainWindow::init(QList<QSharedPointer<Image>> images) {
+MainWindow::MainWindow(std::vector<std::shared_ptr<Image>> images) {
     this->images = images;
     imageLabel = new QLabel;
     setCentralWidget(imageLabel);
@@ -113,12 +114,12 @@ void MainWindow::runFeatureMatching() {
             continue;
         int count;
         Mat match_img;
-        tie(count, match_img) = currentImage->match(*img, configWidget->settings);
+        tie(count, match_img) = ImagePair(currentImage, img).match(configWidget->settings);
 
         if (configWidget->settings.mirrorY) {
             int count_r;
             Mat match_img_r;
-            tie(count_r, match_img_r) = currentImage->match(*img->mirrored, configWidget->settings);
+            tie(count_r, match_img_r) = ImagePair(currentImage, img->mirrored).match(configWidget->settings);
             if (max(count, count_r) > 0) {
                 names << QString(img->file_name.c_str()) + " (" + QString::number(max(count, count_r)) + ")";
                 if (count >= count_r){

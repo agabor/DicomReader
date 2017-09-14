@@ -49,11 +49,8 @@ float getScale(int octave, const MatchSettings &settings) {
 }
 
 void Image::scan(const MatchSettings &settings) {
-    delete mirrored;
-    mirrored = nullptr;
-
     if (settings.mirrorY) {
-        mirrored = new Image;
+        mirrored = std::make_shared<Image>();
         mirrored->file_name = file_name;
         flip(original, mirrored->original, 1);
         mirrored->scanSelf(settings);
@@ -64,13 +61,37 @@ void Image::scan(const MatchSettings &settings) {
 
 void Image::scanSelf(const MatchSettings &settings) {
     applyContrast(settings);
-    SurfFeatureDetector detector{settings.minHessian, OCTAVES, 1};
 
+    clear();
+
+    detectKeyPoints(settings);
+
+    extractDescriptors();
+
+}
+
+void Image::clear() {
     keypoints.clear();
     descriptors.clear();
     scaled_keypoints.clear();
     scaled_descriptors.clear();
+}
 
+
+KeyPoint getScaledKeyPoint(const MatchSettings &settings, const KeyPoint &k) {
+    KeyPoint scaled;
+    scaled.size = k.size * getScale(k.octave, settings);
+    scaled.octave = k.octave;
+    scaled.response = k.response;
+    scaled.angle = k.angle;
+    scaled.class_id = k.class_id;
+    scaled.pt = k.pt;
+    return scaled;
+}
+
+
+void Image::detectKeyPoints(const MatchSettings &settings)  {
+    SurfFeatureDetector detector{settings.minHessian, OCTAVES, 1};
     vector<KeyPoint> points;
     detector.detect(mat, points );
 
@@ -82,18 +103,20 @@ void Image::scanSelf(const MatchSettings &settings) {
 
     for(auto &k : points) {
         addKeyPoint(k, keypoints);
-        KeyPoint scaled;
-        scaled = getScaledKeyPoint(settings, k, scaled);
+        KeyPoint scaled = getScaledKeyPoint(settings, k);
         addKeyPoint(scaled, scaled_keypoints);
     }
+}
 
-
+void Image::extractDescriptors() {
     SurfDescriptorExtractor extractor;
+
     for (auto item : keypoints) {
         Mat desc;
         extractor.compute(mat, item.second, desc);
         descriptors[item.first] = desc;
     }
+
     for (auto item : scaled_keypoints) {
         Mat desc;
         extractor.compute(mat, item.second, desc);
@@ -101,125 +124,7 @@ void Image::scanSelf(const MatchSettings &settings) {
     }
 }
 
-KeyPoint &Image::getScaledKeyPoint(const MatchSettings &settings, const KeyPoint &k, KeyPoint &scaled) const {
-    scaled.size = k.size * getScale(k.octave, settings);
-    scaled.octave = k.octave;
-    scaled.response = k.response;
-    scaled.angle = k.angle;
-    scaled.class_id = k.class_id;
-    scaled.pt = k.pt;
-    return scaled;
-}
 
 
-class MatchList : public vector<DMatch> {
-public:
-    MatchList(const Mat &descriptors1, const Mat &descriptors2) {
-        BFMatcher matcher;
-        matcher.match(descriptors1, descriptors2, *this, Mat());
-        fillEdges();
-    }
-
-    MatchList() = default;
-
-    bool has(int a, int b) const {
-        auto it = edges.find(a);
-        if (it == edges.end())
-            return false;
-        return it->second == b;
-    }
-
-    float getDist(int a, int b) {
-        for (auto &m : *this) {
-            if (m.queryIdx == a && m.trainIdx == b)
-                return m.distance;
-        }
-        return -1.0f;
-    }
-
-    MatchList filter(const MatchList &reverse){
-        MatchList result;
-        for (auto &m : *this) {
-         if (reverse.has(m.trainIdx, m.queryIdx))
-             result.push_back(m);
-        }
-        result.fillEdges();
-        return result;
-    }
-
-private:
-
-    void fillEdges() {
-        for (auto &m : *this) {
-            edges[m.queryIdx] = m.trainIdx;
-        }
-    }
-
-    map<int, int> edges;
-};
 
 
-MatchList getReverseFilteredMatchList(const Mat &descriptors1, const Mat &descriptors2) {
-    MatchList matches(descriptors1, descriptors2);
-    MatchList matches_back(descriptors2, descriptors1);
-    return matches.filter(matches_back);
-}
-
-MatchList getMatchList(const Mat &descriptors1, const Mat &descriptors2, const MatchSettings &settings) {
-    if (settings.reverse)
-        return getReverseFilteredMatchList(descriptors1, descriptors2);
-    else
-        return MatchList(descriptors1, descriptors2);
-}
-
-tuple<int, Mat> Image::match(const Image &other, const MatchSettings &settings) const {
-
-    vector<KeyPoint> mkpoints1;
-    vector<KeyPoint> mkpoints2;
-    vector<DMatch> aggr_matches;
-
-    for (int octave = OCTAVES; octave >= 0; --octave) {
-
-        auto it1 = descriptors.find(octave);
-        if (it1 == descriptors.end())
-            continue;
-
-        auto descriptors1 = it1->second;
-
-
-        auto it2 = other.descriptors.find(octave);
-        if (it2 == other.descriptors.end())
-            continue;
-
-        auto descriptors2 = it2->second;
-
-        MatchList matches = getMatchList(descriptors1, descriptors2, settings);
-        MatchList matches_scaled;
-        if (settings.scale) {
-            matches_scaled = getMatchList(scaled_descriptors.at(octave),
-                                                         other.scaled_descriptors.at(octave), settings);
-        }
-
-        for (size_t i = 0; i < matches.size(); ++i) {
-            auto match = matches[i];
-            if (!settings.scale || matches_scaled.has(match.queryIdx, match.trainIdx)) {
-                mkpoints1.push_back(keypoints.at(octave)[match.queryIdx]);
-                mkpoints2.push_back(other.keypoints.at(octave)[match.trainIdx]);
-                match.queryIdx = static_cast<int>(mkpoints1.size() - 1);
-                match.trainIdx = static_cast<int>(mkpoints2.size() - 1);
-                aggr_matches.push_back(match);
-            }
-        }
-
-    }
-
-
-    Mat imk1, imk2;
-    drawKeypoints(mat, mkpoints1, imk1, Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    drawKeypoints(other.mat, mkpoints2, imk2, Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    Mat img_matches;
-    drawMatches(imk1, mkpoints1, imk2, mkpoints2,
-                aggr_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-                vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-    return tuple<int, Mat>(aggr_matches.size(), img_matches);
-}
