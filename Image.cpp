@@ -49,11 +49,36 @@ float getScale(int octave, const MatchSettings &settings) {
 }
 
 void Image::scan(const MatchSettings &settings) {
+    delete mirrored;
+    mirrored = nullptr;
+
+    if (settings.mirrorY) {
+        mirrored = new Image;
+        mirrored->file_name = file_name;
+        flip(original, mirrored->original, 1);
+        mirrored->scanSelf(settings);
+    }
+
+    scanSelf(settings);
+}
+
+void Image::scanSelf(const MatchSettings &settings) {
     applyContrast(settings);
-    cv::SurfFeatureDetector detector{settings.minHessian, OCTAVES,1};
+    SurfFeatureDetector detector{settings.minHessian, OCTAVES, 1};
+
+    keypoints.clear();
+    descriptors.clear();
+    scaled_keypoints.clear();
+    scaled_descriptors.clear();
 
     vector<KeyPoint> points;
-    detector.detect( mat, points );
+    detector.detect(mat, points );
+
+    sort(points.begin(), points.end(),
+         [](const KeyPoint & a, const KeyPoint & b) -> bool
+         {
+             return a.response > b.response;
+         });
 
     for(auto &k : points) {
         addKeyPoint(k, keypoints);
@@ -86,10 +111,12 @@ KeyPoint &Image::getScaledKeyPoint(const MatchSettings &settings, const KeyPoint
     return scaled;
 }
 
+
 class MatchList : public vector<DMatch> {
 public:
     MatchList(const Mat &descriptors1, const Mat &descriptors2) {
-        FlannBasedMatcher().match(descriptors1, descriptors2, *this, Mat());
+        BFMatcher matcher;
+        matcher.match(descriptors1, descriptors2, *this, Mat());
         fillEdges();
     }
 
@@ -131,10 +158,18 @@ private:
     map<int, int> edges;
 };
 
+
 MatchList getReverseFilteredMatchList(const Mat &descriptors1, const Mat &descriptors2) {
     MatchList matches(descriptors1, descriptors2);
     MatchList matches_back(descriptors2, descriptors1);
     return matches.filter(matches_back);
+}
+
+MatchList getMatchList(const Mat &descriptors1, const Mat &descriptors2, const MatchSettings &settings) {
+    if (settings.reverse)
+        return getReverseFilteredMatchList(descriptors1, descriptors2);
+    else
+        return MatchList(descriptors1, descriptors2);
 }
 
 tuple<int, Mat> Image::match(const Image &other, const MatchSettings &settings) const {
@@ -158,15 +193,18 @@ tuple<int, Mat> Image::match(const Image &other, const MatchSettings &settings) 
 
         auto descriptors2 = it2->second;
 
-        MatchList matches = getReverseFilteredMatchList(descriptors1, descriptors2);
-        MatchList matches_scaled = getReverseFilteredMatchList(scaled_descriptors.at(octave), other.scaled_descriptors.at(octave));
+        MatchList matches = getMatchList(descriptors1, descriptors2, settings);
+        MatchList matches_scaled;
+        if (settings.scale) {
+            matches_scaled = getMatchList(scaled_descriptors.at(octave),
+                                                         other.scaled_descriptors.at(octave), settings);
+        }
 
         for (size_t i = 0; i < matches.size(); ++i) {
             auto match = matches[i];
-            if (matches_scaled.has(match.queryIdx, match.trainIdx)) {
+            if (!settings.scale || matches_scaled.has(match.queryIdx, match.trainIdx)) {
                 mkpoints1.push_back(keypoints.at(octave)[match.queryIdx]);
                 mkpoints2.push_back(other.keypoints.at(octave)[match.trainIdx]);
-                //cout << match.distance << " " << matches_scaled.getDist(match.queryIdx, match.trainIdx) << endl;
                 match.queryIdx = static_cast<int>(mkpoints1.size() - 1);
                 match.trainIdx = static_cast<int>(mkpoints2.size() - 1);
                 aggr_matches.push_back(match);

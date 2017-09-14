@@ -52,6 +52,7 @@ void MainWindow::init(QList<QSharedPointer<Image>> images) {
     auto m = new QStringListModel();
     m->setStringList(fileNames);
     filesView->setModel(m);
+    filesView->setFixedWidth(200);
     currentImage = images[0];
     setImage(currentImage->original);
 }
@@ -71,6 +72,7 @@ void MainWindow::initCategoryWidget() {
     filteredView = new QListView(right_dock);
     right_dock->setWidget(filteredView);
     addDockWidget(RightDockWidgetArea, right_dock);
+    filesView->setFixedWidth(200);
     connect(filteredView, &QListView::activated,[=]( const QModelIndex &index ) {
         setImage(matches[index.row()]);
     });
@@ -110,11 +112,26 @@ void MainWindow::runFeatureMatching() {
         if (img == currentImage)
             continue;
         int count;
-        Mat mimg;
-        tie(count, mimg) = currentImage->match(*img, configWidget->settings);
-        if (count > 0) {
-            names << QString(img->file_name.c_str()) + " (" + QString::number(count) + ")";
-            matches.push_back(mimg);
+        Mat match_img;
+        tie(count, match_img) = currentImage->match(*img, configWidget->settings);
+
+        if (configWidget->settings.mirrorY) {
+            int count_r;
+            Mat match_img_r;
+            tie(count_r, match_img_r) = currentImage->match(*img->mirrored, configWidget->settings);
+            if (max(count, count_r) > 0) {
+                names << QString(img->file_name.c_str()) + " (" + QString::number(max(count, count_r)) + ")";
+                if (count >= count_r){
+                    matches.push_back(match_img);
+                } else {
+                    matches.push_back(match_img_r);
+                }
+            }
+        } else {
+            if (count > 0) {
+                names << QString(img->file_name.c_str()) + " (" + QString::number(count) + ")";
+                matches.push_back(match_img);
+            }
         }
         dialog->setValue(++idx);
         qApp->processEvents();

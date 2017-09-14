@@ -40,13 +40,37 @@ ConfigWidget::ConfigWidget(QWidget *parent) : QDockWidget("config", parent) {
     });
 
 
-    auto *propertyLayout = new QVBoxLayout;
-    propertyLayout->addWidget(new QCheckBox("reverse matching"));
-    propertyLayout->addWidget(new QCheckBox("scaled matching"));
-    layout->addItem(propertyLayout);
+    addCheckBoxes(layout);
+
     widget->setLayout(layout);
 
     setWidget(widget);
+}
+
+void ConfigWidget::addCheckBoxes(QLayout *layout) {
+    auto *propertyLayout = new QVBoxLayout;
+    addBooleanParameter(propertyLayout, "reverse matching", settings.reverse, [=](bool checked) {
+        settings.reverse = checked;
+    });
+    addBooleanParameter(propertyLayout, "scaled matching", settings.scale, [=](bool checked) {
+        settings.scale = checked;
+    });
+    addBooleanParameter(propertyLayout, "mirror Y", settings.mirrorY, [=](bool checked) {
+        settings.mirrorY = checked;
+    });
+
+    layout->addItem(propertyLayout);
+}
+
+void
+ConfigWidget::addBooleanParameter(QLayout *layout, QString name, bool value, std::function<void (bool)> setter) {
+    auto *reverseCB = new QCheckBox(name);
+    reverseCB->setChecked(value);
+    connect(reverseCB, &QCheckBox::toggled, [=](bool val) {
+        changed = true;
+        setter(val);
+    });
+    layout->addWidget(reverseCB);
 }
 
 void ConfigWidget::addDoubleParameter(QLayout *layout, QString name, double value, std::function<void (double)> setter) {

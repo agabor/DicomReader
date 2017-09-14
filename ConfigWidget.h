@@ -19,7 +19,10 @@ public:
     MatchSettings settings;
     bool changed = true;
 private:
+    void addBooleanParameter(QLayout *layout, QString name, bool value, std::function<void (bool)> setter);
     void addDoubleParameter(QLayout *layout, QString name, double value, std::function<void (double)> setter);
+    void addCheckBoxes(QLayout *layout);
+
 };
 
 

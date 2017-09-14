@@ -24,10 +24,14 @@ struct MatchSettings {
     float scale3 = 2.0f;
     double contrast = 3.0f;
     double minHessian = 300.0f;
+    bool mirrorY = false;
+    bool reverse = true;
+    bool scale = true;
 };
 
 class Image {
 public:
+    explicit Image() = default;
     explicit Image(const char* file_name);
     void resize();
     void scan(const MatchSettings &settings);
@@ -44,6 +48,9 @@ public:
     std::string file_name;
 
     cv::KeyPoint &getScaledKeyPoint(const MatchSettings &settings, const cv::KeyPoint &k, cv::KeyPoint &scaled) const;
+    Image *mirrored = nullptr;
+private:
+    void scanSelf(const MatchSettings &settings);
 };
 
 
