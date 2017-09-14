@@ -13,7 +13,8 @@
 using namespace cv;
 using namespace std;
 
-ImagePair::ImagePair(const MatchSettings &settings, std::shared_ptr<Image> a, std::shared_ptr<Image> b) : settings(settings) {
+ImagePair::ImagePair(const MatchSettings &settings, std::shared_ptr<Image> a, std::shared_ptr<Image> b) {
+    this->settings = settings;
     image_a = std::move(a);
     image_b = std::move(b);
     match();
@@ -129,7 +130,7 @@ Mat ImagePair::keyPointImageA() const {
     return imk1;
 }
 
-string ImagePair::label() {
+string ImagePair::label() const {
     stringstream ss;
     ss << image_b->file_name;
     ss << " (";

@@ -23,7 +23,7 @@ public:
 
     cv::Mat matchImage() const;
 
-    std::string label();
+    std::string label() const;
 
     std::shared_ptr<Image> image_a;
     std::shared_ptr<Image> image_b;
@@ -31,7 +31,7 @@ public:
 private:
     void match();
 
-    const MatchSettings &settings;
+    MatchSettings settings;
     std::vector<cv::KeyPoint> matchedKeyPoints1;
     std::vector<cv::KeyPoint> matchedKeyPoints2;
     std::vector<cv::KeyPoint> matchedScaledKeyPoints1;

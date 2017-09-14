@@ -20,7 +20,7 @@
 
 class MainWindow : public QMainWindow {
 public:
-    MainWindow(std::vector<std::shared_ptr<Image>> images);
+    explicit MainWindow(std::vector<std::shared_ptr<Image>> images);
     void setImage(cv::Mat &image);
 private slots:
     void runSURF();
@@ -45,6 +45,8 @@ private:
     void runFeatureMatching();
 
     ImagePair getImagePair(const std::shared_ptr<Image> &img) const;
+
+    void setMatchLabels() const;
 };
 
 

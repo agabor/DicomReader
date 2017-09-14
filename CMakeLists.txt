@@ -5,7 +5,7 @@ find_package(Qt5Core REQUIRED)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SOURCE_FILES main.cpp cv/DicomReader.cpp cv/DicomReader.h ui/MainWindow.cpp ui/MainWindow.h cv/Image.h cv/Image.cpp ui/ConfigWidget.cpp ui/ConfigWidget.h cv/ImagePair.cpp cv/ImagePair.h cv/MatchList.cpp cv/MatchList.h)
+set(SOURCE_FILES main.cpp cv/DicomReader.cpp cv/DicomReader.h ui/MainWindow.cpp ui/MainWindow.h cv/Image.h cv/Image.cpp ui/ConfigWidget.cpp ui/ConfigWidget.h cv/ImagePair.cpp cv/ImagePair.h cv/MatchList.cpp cv/MatchList.h ui/ProgressDialog.cpp ui/ProgressDialog.h)
 add_executable(cv_test ${SOURCE_FILES})
 target_link_libraries(cv_test dcmdata)
 target_link_libraries(cv_test dcmimgle)

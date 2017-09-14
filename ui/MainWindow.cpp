@@ -4,19 +4,12 @@
 
 #include "MainWindow.h"
 
-#include <qt5/QtWidgets/QLabel>
-#include <qt5/QtWidgets/QLayout>
-#include <qt5/QtWidgets/QVBoxLayout>
-#include <qt5/QtGui/QImage>
 #include <QtCore/QStringListModel>
-#include <QtWidgets/QDockWidget>
 #include <QtWidgets/QPushButton>
-#include <tuple>
 #include <QtWidgets/QProgressDialog>
 #include <QtCore/QCoreApplication>
 #include "../cv/DicomReader.h"
-#include "ConfigWidget.h"
-#include "../cv/ImagePair.h"
+#include "ProgressDialog.h"
 
 using namespace cv;
 using namespace std;
@@ -104,14 +97,7 @@ void MainWindow::runSURF() {
 }
 
 void MainWindow::runFeatureMatching() {
-    QStringList names;
-    auto *dialog = new QProgressDialog(this);
-    dialog->setLabelText("Feature Matching");
-    dialog->setCancelButton(nullptr);
-    dialog->setMaximum(images.size() - 1);
-    int idx = 0;
-    dialog->show();
-    qApp->processEvents();
+    ProgressDialog::start("Feature Matching", static_cast<int>(images.size() - 1));
     for (const auto &img : images) {
         if (img == currentImage)
             continue;
@@ -119,17 +105,29 @@ void MainWindow::runFeatureMatching() {
         ImagePair imagePair = getImagePair(img);
 
         if (imagePair.matchCount() > 0) {
-            names << imagePair.label().c_str();
             matches.push_back(imagePair);
         }
-        dialog->setValue(++idx);
-        qApp->processEvents();
+        ProgressDialog::step();
     }
+    ProgressDialog::end();
+    sort(matches.begin(), matches.end(),
+         [](const ImagePair & a, const ImagePair & b) -> bool
+         {
+             return a.matchCount() > b.matchCount();
+         });
 
+
+    setMatchLabels();
+}
+
+void MainWindow::setMatchLabels() const {
+    QStringList labels;
+    for (auto &pair : matches) {
+        labels << pair.label().c_str();
+    }
     auto model = new QStringListModel();
-    model->setStringList(names);
+    model->setStringList(labels);
     filteredView->setModel(model);
-    dialog->close();
 }
 
 ImagePair MainWindow::getImagePair(const shared_ptr<Image> &img) const {
@@ -145,19 +143,13 @@ ImagePair MainWindow::getImagePair(const shared_ptr<Image> &img) const {
 
 void MainWindow::runFeatureDetectionAndDescription() {
     configWidget->changed = false;
-    auto *dialog = new QProgressDialog(this);
-    dialog->setLabelText("Feature Detection & Description");
-    dialog->setCancelButton(nullptr);
-    dialog->setMaximum(images.size());
-    int idx = 0;
-    dialog->show();
+    ProgressDialog::start("Feature Detection & Description", static_cast<int>(images.size()));
     qApp->processEvents();
 
     for (const auto &img : images) {
         img->scan(configWidget->settings);
-        dialog->setValue(++idx);
-        qApp->processEvents();
+        ProgressDialog::step();
     }
-    dialog->close();
+    ProgressDialog::end();
 }
 

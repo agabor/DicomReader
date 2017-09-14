@@ -4,13 +4,14 @@
 #include <iostream>
 #include <qt5/QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>
-#include <QtWidgets/QProgressDialog>
 #include "ui/MainWindow.h"
+#include "ui/ProgressDialog.h"
 
 
 using namespace cv;
 using namespace std;
 
+vector<shared_ptr<Image>> readImages(const QApplication &app, const QString &dirPath);
 
 int main(int argc, char** argv)
 {
@@ -23,32 +24,10 @@ int main(int argc, char** argv)
                                                     "/home/agabor/CLionProjects/cv_test/input",
                                                     QFileDialog::ShowDirsOnly
                                                     | QFileDialog::DontResolveSymlinks);
-    QDir dir(dirPath);
+    if (dirPath.isEmpty())
+        return 0;
 
-
-    QStringList files = dir.entryList();
-    auto *dialog = new QProgressDialog;
-    dialog->setLabelText("Loading Files");
-    dialog->setCancelButton(nullptr);
-    dialog->setMaximum(files.size());
-    int idx = 0;
-    dialog->show();
-    std::vector<std::shared_ptr<Image>> images;
-    for (auto& file :  files) {
-        dialog->setValue(idx++);
-        app.processEvents();
-        if (file.startsWith('.'))
-            continue;
-        const QString absoluteFilePath = dir.absoluteFilePath(file);
-        if (DicomReader::isDicomFile(absoluteFilePath.toLatin1().data())) {
-            auto *i = new Image(absoluteFilePath.toLatin1().data());
-            i->file_name = file.toLatin1().data();
-            images.push_back(std::shared_ptr<Image>(i));
-        }
-    }
-    dialog->setValue(files.size());
-    app.processEvents();
-    dialog->close();
+    vector<shared_ptr<Image>> images = readImages(app, dirPath);
 
     auto *window = new MainWindow(images);
 
@@ -56,6 +35,26 @@ int main(int argc, char** argv)
     window->show();
 
     return app.exec();
+}
+
+vector<shared_ptr<Image>> readImages(const QApplication &app, const QString &dirPath) {
+    QDir dir(dirPath);
+    QStringList files = dir.entryList();
+    ProgressDialog::start("Loading Files", files.size());
+    vector<shared_ptr<Image>> images;
+    for (auto &file :  files) {
+        ProgressDialog::step();
+        if (file.startsWith('.'))
+            continue;
+        const QString absoluteFilePath = dir.absoluteFilePath(file);
+        if (DicomReader::isDicomFile(absoluteFilePath.toLatin1().data())) {
+            auto *i = new Image(absoluteFilePath.toLatin1().data());
+            i->file_name = file.toLatin1().data();
+            images.push_back(shared_ptr<Image>(i));
+        }
+    }
+    ProgressDialog::end();
+    return images;
 }
 
 
